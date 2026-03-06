@@ -649,10 +649,11 @@ void open_folder(const char* path) {
     mkdir(path, 0777);
     launch("xdg-open", path);
 
-#elif __APPLE__ // macOS
+#elif defined(__APPLE__) && !defined(TARGET_IOS) // macOS
     mkdir(path, 0777);
     launch("open", path);
 #endif
+    // iOS: no-op; users access the app's folder via the Files app
 }
 
 const char *strstr_lowercased(const char *haystack, const char *needle) {
