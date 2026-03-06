@@ -73,7 +73,11 @@ ConfigWindow configWindow       = {
     .h = DESIRED_SCREEN_HEIGHT,
     .vsync = 1,
     .reset = false,
+#if defined(TARGET_IOS)
+    .fullscreen = true,
+#else
     .fullscreen = false,
+#endif
     .exiting_fullscreen = false,
     .settings_changed = false,
     .msaa = 0,
@@ -217,7 +221,9 @@ bool configExCoopTheme = false;
 
 static const struct ConfigOption options[] = {
     // window settings
+#if !defined(TARGET_IOS)
     {.name = "fullscreen",                     .type = CONFIG_TYPE_BOOL, .boolValue = &configWindow.fullscreen},
+#endif
     {.name = "window_x",                       .type = CONFIG_TYPE_UINT, .uintValue = &configWindow.x},
     {.name = "window_y",                       .type = CONFIG_TYPE_UINT, .uintValue = &configWindow.y},
     {.name = "window_w",                       .type = CONFIG_TYPE_UINT, .uintValue = &configWindow.w},

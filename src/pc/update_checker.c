@@ -1,5 +1,9 @@
 #include <stdio.h>
-#if defined(_WIN32) || defined(_WIN64)
+#include <string.h>
+
+#if defined(TARGET_IOS)
+// No update checking on iOS - no curl dependency
+#elif defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
 #include <wininet.h>
 #else
@@ -10,6 +14,13 @@
 #include "pc/djui/djui.h"
 #include "pc/network/version.h"
 #include "pc/loading.h"
+
+bool gUpdateMessage = false;
+
+#if defined(TARGET_IOS)
+void show_update_popup(void) { }
+void check_for_updates(void) { }
+#else
 
 #define URL "https://raw.githubusercontent.com/coop-deluxe/sm64coopdx/refs/heads/main/src/pc/network/version.h"
 #define VERSION_IDENTIFIER "#define SM64COOPDX_VERSION \""
@@ -24,8 +35,6 @@ downloading and parsing a source file.
 
 static char sVersionUpdateTextBuffer[256] = { 0 };
 static char sRemoteVersion[8] = { 0 };
-
-bool gUpdateMessage = false;
 
 void show_update_popup(void) {
     if (sVersionUpdateTextBuffer[0] == '\0') { return; }
@@ -158,3 +167,5 @@ void check_for_updates(void) {
         gUpdateMessage = true;
     }
 }
+
+#endif /* !TARGET_IOS */

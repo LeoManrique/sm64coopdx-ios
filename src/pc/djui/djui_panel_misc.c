@@ -22,10 +22,12 @@ static void djui_panel_options_open_user_folder(UNUSED struct DjuiBase* caller) 
     snprintf(command, sizeof(command), "xdg-open \"%s\"", fs_get_write_path(""));
     system(command);
 #elif __APPLE__
+  #if !defined(TARGET_IOS)
     // macOS
     char command[512];
     snprintf(command, sizeof(command), "open \"%s\"", fs_get_write_path(""));
     system(command);
+  #endif
 #endif
 }
 

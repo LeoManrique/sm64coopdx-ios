@@ -332,7 +332,11 @@ const char *sys_user_path(void) {
 
 const char *sys_resource_path(void)
 {
-#ifdef __APPLE__ // Kinda lazy, but I don't know how to add CoreFoundation.framework
+#ifdef TARGET_IOS
+    // On iOS, resources are in the app bundle root (same as exe dir)
+    return sys_exe_path_dir();
+#elif defined(__APPLE__)
+    // On macOS: Foo.app/Contents/MacOS/binary -> Foo.app/Contents/Resources
     static char path[SYS_MAX_PATH];
     if ('\0' != path[0]) { return path; }
 
