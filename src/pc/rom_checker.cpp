@@ -79,7 +79,8 @@ static bool is_rom_valid(const std::string romPath) {
 }
 
 inline static bool scan_path_for_rom(const char *dir) {
-    for (const auto &entry: std::filesystem::directory_iterator(dir)) {
+    if (!dir || !fs::exists(dir) || !fs::is_directory(dir)) { return false; }
+    for (const auto &entry: fs::directory_iterator(dir)) {
         std::string path = entry.path().generic_string();
         if (path_ends_with(path.c_str(), ".z64")) {
             if (is_rom_valid(path)) { return true; }
@@ -95,6 +96,11 @@ void legacy_folder_handler(void) {
 
 bool main_rom_handler(void) {
     if (scan_path_for_rom(fs_get_write_path(""))) { return true; }
+#ifdef TARGET_IOS
+    // TODO: Add a file picker UI to let users select/import a ROM on iOS
+    // For now, also scan the app bundle's Resources directory
+    scan_path_for_rom(sys_resource_path());
+#endif
     scan_path_for_rom(sys_exe_path_dir());
     return gRomIsValid;
 }
