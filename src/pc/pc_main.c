@@ -26,6 +26,7 @@
 #include "loading.h"
 #include "cliopts.h"
 #include "configfile.h"
+#include "platform.h"
 #include "thread.h"
 #include "controller/controller_api.h"
 #include "controller/controller_keyboard.h"
@@ -203,7 +204,16 @@ static s32 get_num_frames_to_draw(f64 t, u32 frameLimit) {
 }
 
 static u32 get_display_refresh_rate() {
-#ifdef HAVE_SDL2
+#ifdef TARGET_IOS
+    // On iOS, UIScreen.maximumFramesPerSecond reliably reports ProMotion rates (120Hz)
+    // while SDL_GetCurrentDisplayMode may report only 60Hz
+    static u32 refreshRate = 0;
+    if (!refreshRate) {
+        refreshRate = platform_ios_get_refresh_rate();
+        if (refreshRate == 0) { refreshRate = 60; }
+    }
+    return refreshRate;
+#elif defined(HAVE_SDL2)
     static u32 refreshRate = 0;
     if (!refreshRate) {
         SDL_DisplayMode mode;

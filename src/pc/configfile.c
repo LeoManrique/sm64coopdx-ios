@@ -203,7 +203,7 @@ char         configPassword[MAX_CONFIG_STRING]    = "";
 char         configDestId[MAX_CONFIG_STRING]      = "0";
 // DJUI settings
 unsigned int configDjuiTheme                      = DJUI_THEME_DARK;
-#ifdef HANDHELD
+#if defined(HANDHELD) && !defined(TARGET_IOS)
 bool         configDjuiThemeCenter                = false;
 #else
 bool         configDjuiThemeCenter                = true;
