@@ -29,6 +29,8 @@ void sys_swap_backslashes(char* buffer);
 
 #ifdef TARGET_IOS
 unsigned int platform_ios_get_refresh_rate(void);
+void platform_ios_open_rom_picker(void);
+bool platform_ios_is_picker_active(void);
 #endif
 
 // shows an error message in some way and terminates the game
