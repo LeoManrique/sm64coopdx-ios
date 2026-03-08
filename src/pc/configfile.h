@@ -176,6 +176,13 @@ extern bool         configSkipPackGeneration;
 // secrets
 extern bool configExCoopTheme;
 
+#ifdef TOUCH_CONTROLS
+extern bool         configAutohideTouch;
+extern bool         configSlideTouch;
+extern bool         configPhantomTouch;
+extern bool         configSnapTouch;
+#endif
+
 void enable_queued_mods(void);
 void enable_queued_dynos_packs(void);
 void configfile_load(void);

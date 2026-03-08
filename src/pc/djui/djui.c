@@ -12,6 +12,9 @@
 #include "pc/cliopts.h"
 #include "game/level_update.h"
 #include "pc/lua/smlua_hooks.h"
+#ifdef TOUCH_CONTROLS
+#include "pc/controller/controller_touchscreen.h"
+#endif
 #include "djui_panel_playerlist.h"
 #include "djui_hud_utils.h"
 #include "engine/math_util.h"
@@ -182,6 +185,11 @@ void djui_render(void) {
     gDjuiHudUtilsZ = 0;
     djui_reset_hud_params();
 
+#ifdef TOUCH_CONTROLS
+    extern bool is_game_paused(void);
+    if (gInTouchConfig || is_game_paused()) render_touch_controls();
+#endif
+
     create_dl_ortho_matrix();
     djui_gfx_displaylist_begin();
 
@@ -227,6 +235,9 @@ void djui_render(void) {
     }
 
     djui_cursor_update();
+#ifdef TOUCH_CONTROLS
+    if (!gInTouchConfig && !is_game_paused()) render_touch_controls();
+#endif
     djui_base_render(&gDjuiConsole->base);
 
     // Be careful! Djui interactables update at 30hz to avoid display list corruption.

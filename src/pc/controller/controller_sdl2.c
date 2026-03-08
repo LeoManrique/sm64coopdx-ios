@@ -16,6 +16,9 @@
 #include "controller_api.h"
 #include "controller_sdl.h"
 #include "controller_mouse.h"
+#ifdef TOUCH_CONTROLS
+#include "controller_touchscreen.h"
+#endif
 #include "pc/pc_main.h"
 #include "pc/configfile.h"
 #include "pc/platform.h"
@@ -239,8 +242,18 @@ static void controller_sdl_read(OSContPad *pad) {
         righty = SDL_GameControllerGetAxis(sdl_cntrl, SDL_CONTROLLER_AXIS_RIGHTY);
         ltrig = SDL_GameControllerGetAxis(sdl_cntrl, SDL_CONTROLLER_AXIS_TRIGGERLEFT);
         rtrig = SDL_GameControllerGetAxis(sdl_cntrl, SDL_CONTROLLER_AXIS_TRIGGERRIGHT);
+#ifdef TOUCH_CONTROLS
+        if (abs(leftx) > 4000 || abs(lefty) > 4000 ||
+            abs(rightx) > 4000 || abs(righty) > 4000 ||
+            ltrig > 4000 || rtrig > 4000) {
+            gGamepadActive = true;
+        }
+#endif
         for (u32 i = 0; i < SDL_CONTROLLER_BUTTON_MAX; ++i) {
             const bool new = SDL_GameControllerGetButton(sdl_cntrl, i);
+#ifdef TOUCH_CONTROLS
+            if (new) gGamepadActive = true;
+#endif
             update_button(i, new);
         }
     } else if (sdl_joystick) {
