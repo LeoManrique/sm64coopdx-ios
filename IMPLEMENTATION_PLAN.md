@@ -13,10 +13,11 @@ This port follows the patterns established by the existing Android port (`TOUCH_
    - All completed source modifications (Phases 1-5)
    - Game is fully playable with a physical controller
 
-2. **PR 2 — Touch Controls** (in progress)
-   - Port Android touch control framework to iOS
+2. **PR 2 — Touch Controls** (complete)
+   - Ported Android touch control framework to iOS
    - SDL2 finger event handling
    - DJUI touch settings panel
+   - iPad gamepad fix (SDL2 patches)
 
 3. **PR 3 — iOS Polish & UX**
    - ROM file picker (no bundled ROM)
@@ -122,6 +123,40 @@ OpenGLES, UIKit, Foundation, GameController, AudioToolbox, CoreAudio, CoreMotion
 | Menu left-aligned | `configDjuiThemeCenter` excluded from HANDHELD override on iOS |
 | FPS capped at 60 on ProMotion | Native UIKit refresh rate query + Info.plist key |
 
+### Phase 6: Touch Controls
+
+| Item | Details |
+|------|---------|
+| Touch controller core | `src/pc/controller/controller_touchscreen.c/h` — ported from Android, 21 input elements (stick, A/B/X/Y/L/R/Z/Start, C-buttons, D-pad, chat, playerlist, console) |
+| Touch button layout | `src/pc/controller/controller_touchscreen_layout.inc` — default element positions and sizes |
+| Touch button textures | `src/pc/controller/controller_touchscreen_textures.c/h` — 42 RGBA16 textures (16x16), generated from PNGs via `n64graphics` |
+| Controller registration | `src/pc/controller/controller_entry_point.c` — `controller_touchscreen` added to implementations array |
+| SDL2 finger events | `src/pc/gfx/gfx_sdl2.c` — `SDL_FINGERDOWN/MOTION/UP` handlers converting to `TouchEvent` structs |
+| Touch callback API | `src/pc/gfx/gfx_window_manager_api.h` — `set_touchscreen_callbacks` function pointer (guarded by `TOUCH_CONTROLS`) |
+| Callback registration | `src/pc/pc_main.c` — touch callbacks wired up at init |
+| Config variables | `src/pc/configfile.c/h` — touch element positions, sizes, anchors, colors, autohide setting |
+| DJUI settings panel | `src/pc/djui/djui_panel_touch_controls.c/h` — touch controls settings UI |
+| DJUI layout editor | `src/pc/djui/djui_panel_touch_controls_editor.c/h` — drag-to-reposition touch elements |
+| Camera integration | `src/game/bettercamera.inc.h` — touch mouse input for camera control |
+| DJUI panel integration | `src/pc/djui/djui_panel.c`, `src/pc/djui/djui_panel_controls.c` — touch controls menu entry |
+| DJUI cursor fix | `src/pc/djui/djui_cursor.c` — touch input cursor handling |
+| DJUI interactable | `src/pc/djui/djui_interactable.c` — touch-aware focus/interaction |
+| Gamepad auto-hide | `src/pc/controller/controller_sdl2.c` — `gGamepadActive` set on stick/trigger axis input (deadzone 4000) to auto-hide touch controls |
+
+### Phase 7: iPad Gamepad Fix
+
+iPadOS converts game controller button presses into phantom `SDL_KEYDOWN` keyboard events through three SDL2 pathways (GCKeyboard, UIPress, UIKeyCommand). This caused A button to open chat and L-stick to move camera on iPad. Fixed by patching SDL2 source:
+
+| File | Change |
+|------|--------|
+| `SDL_uikitevents.m` | Disabled `SDL_InitGCKeyboard()` on iOS — prevents GCKeyboard from converting gamepad to keyboard events |
+| `SDL_uikitview.m` | Guarded `pressesBegan`/`pressesEnded`/`pressesCancelled` with `#if !TARGET_OS_IOS` — prevents UIPress gamepad-to-keyboard conversion |
+| `SDL_uikitviewcontroller.m` | `keyCommands` returns empty array on iOS — prevents UIKeyCommand gamepad-to-keyboard conversion |
+| `CMakeLists.txt` | Auto-applies `patches/sdl2-ios-gamepad-fix.patch` at configure time |
+| `patches/sdl2-ios-gamepad-fix.patch` | Tracked patch file for reproducible SDL2 modifications |
+
+Text input (chat) still works via `SDL_TEXTINPUT` events (UIKit text field responder chain), which is separate from the disabled keyboard pathways.
+
 ### Verified Working
 
 - [x] Fullscreen rendering at native resolution
@@ -133,6 +168,10 @@ OpenGLES, UIKit, Foundation, GameController, AudioToolbox, CoreAudio, CoreMotion
 - [x] Physical controller input (MFi / GameController via SDL2)
 - [x] DynOS pack loading
 - [x] Game fully playable with controller
+- [x] Touch controls (all 21 elements, customizable layout)
+- [x] Touch controls auto-hide when gamepad active
+- [x] iPad gamepad support (no phantom keyboard events)
+- [x] iPhone + iPad both working with touch and gamepad
 
 ---
 
@@ -140,24 +179,13 @@ OpenGLES, UIKit, Foundation, GameController, AudioToolbox, CoreAudio, CoreMotion
 
 ### P0 — Required for Merge
 
-#### Touch Controls
+#### Touch Controls — DONE
 
-Port the Android touch control framework. The Android implementation lives in `controller_touchscreen.c` (~500 lines) with 21 input elements (stick, A/B/X/Y/L/R/Z/Start, C-buttons, D-pad, chat, playerlist, console).
+Ported from Android. See Phase 6 above for full details.
 
-| Task | File(s) | Status |
-|------|---------|--------|
-| Port touch controller core | `src/pc/controller/controller_touchscreen.c/h` | TODO |
-| Port touch button layout | `src/pc/controller/controller_touchscreen_layout.inc` | TODO |
-| Port touch button textures | `src/pc/controller/controller_touchscreen_textures.c/h` | TODO |
-| Register touch controller | `src/pc/controller/controller_entry_point.c` | TODO |
-| SDL2 finger event handling | `src/pc/gfx/gfx_sdl2.c` | TODO |
-| Touch callback API | `src/pc/gfx/gfx_window_manager_api.h` | TODO |
-| Register touch callbacks | `src/pc/pc_main.c` | TODO |
-| Touch config variables | `src/pc/configfile.c/h` | TODO |
-| Touch settings DJUI panel | `src/pc/djui/djui_panel_touch_controls.c/h` | TODO |
-| Touch layout editor | `src/pc/djui/djui_panel_touch_controls_editor.c/h` | TODO |
-| Camera touch integration | `src/game/camera.c`, `bettercamera.inc.h` | TODO |
-| CMake: add `TOUCH_CONTROLS` define + sources | `CMakeLists.txt` | TODO |
+#### iPad Gamepad Fix — DONE
+
+Fixed iPadOS converting gamepad to keyboard events. See Phase 7 above for full details.
 
 #### ROM File Picker
 
@@ -177,7 +205,7 @@ Replace the bundled ROM approach with a user-facing file picker so the ROM is no
 | Hide "fullscreen" toggle in display settings | `src/pc/djui/djui_panel_display.c` | TODO |
 | Hide "mute on focus loss" in sound settings | `src/pc/djui/djui_panel_sound.c` | TODO |
 | Disable accelerometer-as-joystick | `src/pc/controller/controller_sdl2.c` | TODO |
-| Disable `SDL_StartTextInput()` on mobile | `src/pc/gfx/gfx_sdl2.c` | TODO |
+| ~~Disable `SDL_StartTextInput()` on mobile~~ | `src/pc/gfx/gfx_sdl2.c` | NOT NEEDED (fixed via SDL2 patch instead) |
 | `pthread_cancel` -> `pthread_kill` (iOS compat) | `src/pc/thread.c` | TODO |
 | Add touch controls button to controls menu | `src/pc/djui/djui_panel_controls.c` | TODO |
 | GLES 3.0 shader rewrite (see details below) | `src/pc/gfx/gfx_opengl.c` | TODO |
@@ -187,7 +215,7 @@ Replace the bundled ROM approach with a user-facing file picker so the ROM is no
 | DJUI interactable: add `SCANCODE_BACK` as escape alternative | `src/pc/djui/djui_interactable.c` | TODO |
 | DJUI interactable: fix cursor update for touch input | `src/pc/djui/djui_interactable.c` | TODO |
 | DJUI interactable: Android-style focus begin hook for keyboard | `src/pc/djui/djui_interactable.c` | TODO |
-| Duplicate `controller_sdl2.c` for `TOUCH_CONTROLS` build | `src/pc/controller/controller_sdl2.c` | TODO |
+| `controller_sdl2.c` touch controls integration | `src/pc/controller/controller_sdl2.c` | DONE (gGamepadActive axis deadzone) |
 
 ### P1 Details — GLES 3.0 Shader Rewrite
 
@@ -286,7 +314,7 @@ The Android port wraps the entire `controller_sdl2.c` in an `#ifdef TOUCH_CONTRO
 | ROM handling | File-based | Bundle (temporary) -> File picker (planned) |
 | Distribution | APK sideload | Xcode sideload / AltStore / TrollStore |
 | Menu centering | Left-aligned (HANDHELD) | Centered (HANDHELD override for iOS) |
-| Touch controls | Implemented | Planned (porting from Android) |
+| Touch controls | Implemented | Implemented (ported from Android) |
 
 ---
 
@@ -296,12 +324,31 @@ New files:
 - `platform/ios/Info.plist`
 - `src/pc/platform_ios.m`
 - `CMakeLists.txt` (new, upstream uses Makefile)
+- `patches/sdl2-ios-gamepad-fix.patch`
+- `src/pc/controller/controller_touchscreen.c/h`
+- `src/pc/controller/controller_touchscreen_layout.inc`
+- `src/pc/controller/controller_touchscreen_textures.c/h`
+- `textures/touchcontrols/*.rgba16.inc.c` (42 generated texture data files)
+- `src/pc/djui/djui_panel_touch_controls.c/h`
+- `src/pc/djui/djui_panel_touch_controls_editor.c/h`
 
 Modified files:
-- `src/pc/configfile.c` — fullscreen default, theme center override
-- `src/pc/gfx/gfx_sdl2.c` — GLES 3.0 context, landscape hint
-- `src/pc/pc_main.c` — iOS refresh rate query
+- `src/pc/configfile.c` — fullscreen default, theme center override, touch control config variables
+- `src/pc/configfile.h` — touch control config declarations
+- `src/pc/gfx/gfx_sdl2.c` — GLES 3.0 context, landscape hint, touch finger event handling
+- `src/pc/gfx/gfx_window_manager_api.h` — `set_touchscreen_callbacks` API
+- `src/pc/gfx/gfx_dummy.c` — touch callback stub
+- `src/pc/pc_main.c` — iOS refresh rate query, touch callback registration
 - `src/pc/platform.c` — `sys_resource_path()` iOS path
 - `src/pc/platform.h` — iOS function declaration
 - `src/pc/rom_checker.cpp` — bundle scanning, directory guard
 - `src/pc/update_checker.c` — stubbed on iOS
+- `src/pc/controller/controller_entry_point.c` — touch controller registration
+- `src/pc/controller/controller_sdl2.c` — gGamepadActive axis deadzone for auto-hide
+- `src/pc/djui/djui.c` — touch controls render call
+- `src/pc/djui/djui_cursor.c` — touch input cursor handling
+- `src/pc/djui/djui_interactable.c` — touch-aware interaction
+- `src/pc/djui/djui_panel.c` — touch controls menu integration
+- `src/pc/djui/djui_panel_controls.c` — touch controls button in controls menu
+- `src/game/bettercamera.inc.h` — touch mouse camera control
+- `.gitignore` — unignored `CMakeLists.txt`
