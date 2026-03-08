@@ -1,0 +1,77 @@
+diff --git a/src/video/uikit/SDL_uikitevents.m b/src/video/uikit/SDL_uikitevents.m
+index 0a96c68..1e94a75 100644
+--- a/src/video/uikit/SDL_uikitevents.m
++++ b/src/video/uikit/SDL_uikitevents.m
+@@ -179,6 +179,9 @@ static void OnGCKeyboardDisconnected(GCKeyboard *keyboard) API_AVAILABLE(macos(1
+ 
+ void SDL_InitGCKeyboard(void)
+ {
++#if TARGET_OS_IOS
++    return; /* Disable GCKeyboard on iOS/iPadOS — it converts gamepad buttons to keyboard events */
++#endif
+     @autoreleasepool {
+         if (@available(iOS 14.0, tvOS 14.0, *)) {
+             NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+diff --git a/src/video/uikit/SDL_uikitview.m b/src/video/uikit/SDL_uikitview.m
+index 676fedb..a4e8f75 100644
+--- a/src/video/uikit/SDL_uikitview.m
++++ b/src/video/uikit/SDL_uikitview.m
+@@ -414,12 +414,14 @@ - (SDL_Scancode)scancodeFromPress:(UIPress*)press
+ 
+ - (void)pressesBegan:(NSSet<UIPress *> *)presses withEvent:(UIPressesEvent *)event
+ {
++#if !TARGET_OS_IOS /* Disabled on iOS — iPadOS converts gamepad buttons to UIPress keyboard events */
+     if (!SDL_HasGCKeyboard()) {
+         for (UIPress *press in presses) {
+             SDL_Scancode scancode = [self scancodeFromPress:press];
+             SDL_SendKeyboardKey(SDL_PRESSED, scancode);
+         }
+     }
++#endif
+     if (SDL_IsTextInputActive()) {
+         [super pressesBegan:presses withEvent:event];
+     }
+@@ -427,12 +429,14 @@ - (void)pressesBegan:(NSSet<UIPress *> *)presses withEvent:(UIPressesEvent *)eve
+ 
+ - (void)pressesEnded:(NSSet<UIPress *> *)presses withEvent:(UIPressesEvent *)event
+ {
++#if !TARGET_OS_IOS
+     if (!SDL_HasGCKeyboard()) {
+         for (UIPress *press in presses) {
+             SDL_Scancode scancode = [self scancodeFromPress:press];
+             SDL_SendKeyboardKey(SDL_RELEASED, scancode);
+         }
+     }
++#endif
+     if (SDL_IsTextInputActive()) {
+         [super pressesEnded:presses withEvent:event];
+     }
+@@ -440,12 +444,14 @@ - (void)pressesEnded:(NSSet<UIPress *> *)presses withEvent:(UIPressesEvent *)eve
+ 
+ - (void)pressesCancelled:(NSSet<UIPress *> *)presses withEvent:(UIPressesEvent *)event
+ {
++#if !TARGET_OS_IOS
+     if (!SDL_HasGCKeyboard()) {
+         for (UIPress *press in presses) {
+             SDL_Scancode scancode = [self scancodeFromPress:press];
+             SDL_SendKeyboardKey(SDL_RELEASED, scancode);
+         }
+     }
++#endif
+     if (SDL_IsTextInputActive()) {
+         [super pressesCancelled:presses withEvent:event];
+     }
+diff --git a/src/video/uikit/SDL_uikitviewcontroller.m b/src/video/uikit/SDL_uikitviewcontroller.m
+index dee4b19..c4330ea 100644
+--- a/src/video/uikit/SDL_uikitviewcontroller.m
++++ b/src/video/uikit/SDL_uikitviewcontroller.m
+@@ -334,6 +334,9 @@ - (void)initKeyboard
+ 
+ - (NSArray *)keyCommands
+ {
++#if TARGET_OS_IOS
++    return @[]; /* Disabled on iOS — iPadOS converts gamepad buttons to UIKeyCommand events */
++#endif
+     NSMutableArray *commands = [[NSMutableArray alloc] init];
+     [commands addObject:[UIKeyCommand keyCommandWithInput:UIKeyInputUpArrow modifierFlags:kNilOptions action:@selector(handleCommand:)]];
+     [commands addObject:[UIKeyCommand keyCommandWithInput:UIKeyInputDownArrow modifierFlags:kNilOptions action:@selector(handleCommand:)]];
