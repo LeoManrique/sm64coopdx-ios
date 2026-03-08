@@ -52,7 +52,7 @@ cmake -G Xcode \
 | `TARGET_IOS` | iOS-specific code paths |
 | `HANDHELD` | Shared mobile behavior (also used by Switch) |
 | `USE_GLES` | OpenGL ES rendering |
-| `TOUCH_CONTROLS` | Touch input (planned, matches Android) |
+| `TOUCH_CONTROLS` | Touch input (implemented, matches Android) |
 
 ### App Bundle Layout
 
