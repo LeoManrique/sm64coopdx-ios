@@ -8,6 +8,7 @@
 #include "pc/controller/controller_sdl.h"
 #include "pc/controller/controller_mouse.h"
 #include "pc/controller/controller_keyboard.h"
+#include "pc/controller/controller_touchscreen.h"
 #include "pc/utils/misc.h"
 #include "pc/network/network.h"
 
@@ -210,6 +211,13 @@ bool djui_interactable_on_key_down(int scancode) {
             return true;
         }
     }
+
+#ifdef TOUCH_CONTROLS
+    if (scancode == SCANCODE_BACK && djui_panel_is_active()) {
+        djui_panel_back();
+        return true;
+    }
+#endif
 
     if (scancode == SCANCODE_ESCAPE && djui_panel_is_active()) {
         // pressed escape button on keyboard
@@ -451,6 +459,10 @@ void djui_interactable_update(void) {
         djui_interactable_on_bind(gInteractableBinding);
     } else if ((padButtons & PAD_BUTTON_A) || (mouseButtons & MOUSE_BUTTON_1)) {
         // cursor down events
+#ifdef TOUCH_CONTROLS
+        if (gInteractableMouseDown == NULL)
+            djui_interactable_cursor_update_active(&gDjuiRoot->base);
+#endif
         if (gDjuiHovered != NULL) {
             gInteractableMouseDown = gDjuiHovered;
             gDjuiHovered = NULL;
