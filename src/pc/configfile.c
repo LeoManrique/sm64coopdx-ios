@@ -22,6 +22,9 @@
 #include "game/save_file.h"
 #include "pc/network/network_player.h"
 #include "pc/pc_main.h"
+#ifdef TOUCH_CONTROLS
+#include "controller/controller_touchscreen.h"
+#endif
 
 #define ARRAY_LEN(arr) (sizeof(arr) / sizeof(arr[0]))
 
@@ -33,6 +36,9 @@ enum ConfigOptionType {
     CONFIG_TYPE_STRING,
     CONFIG_TYPE_U64,
     CONFIG_TYPE_COLOR,
+#ifdef TOUCH_CONTROLS
+    CONFIG_TYPE_TOUCH,
+#endif
 };
 
 struct ConfigOption {
@@ -45,6 +51,9 @@ struct ConfigOption {
         char* stringValue;
         u64* u64Value;
         u8 (*colorValue)[3];
+#ifdef TOUCH_CONTROLS
+        ConfigControlElement *touchValues;
+#endif
     };
     int maxStringLength;
 };
@@ -101,14 +110,25 @@ unsigned int configEnvVolume                      = MAX_VOLUME;
 bool         configFadeoutDistantSounds           = false;
 bool         configMuteFocusLoss                  = false;
 // control binds
+#ifdef TOUCH_CONTROLS
+unsigned int configKeyA[MAX_BINDS]                = { 0x0026,     0x1000,     VK_INVALID };
+unsigned int configKeyB[MAX_BINDS]                = { 0x0033,     0x1001,     VK_INVALID };
+#else
 unsigned int configKeyA[MAX_BINDS]                = { 0x0026,     0x1000,     0x1103     };
 unsigned int configKeyB[MAX_BINDS]                = { 0x0033,     0x1001,     0x1101     };
+#endif
 unsigned int configKeyX[MAX_BINDS]                = { 0x0017,     0x1002,     VK_INVALID };
 unsigned int configKeyY[MAX_BINDS]                = { 0x0032,     0x1003,     VK_INVALID };
 unsigned int configKeyStart[MAX_BINDS]            = { 0x0039,     0x1006,     VK_INVALID };
+#ifdef TOUCH_CONTROLS
+unsigned int configKeyL[MAX_BINDS]                = { 0x002A,     0x1009,     VK_INVALID };
+unsigned int configKeyR[MAX_BINDS]                = { 0x0036,     0x100A,     VK_INVALID };
+unsigned int configKeyZ[MAX_BINDS]                = { 0x0025,     0x101A,     VK_INVALID };
+#else
 unsigned int configKeyL[MAX_BINDS]                = { 0x002A,     0x1009,     0x1104     };
 unsigned int configKeyR[MAX_BINDS]                = { 0x0036,     0x100A,     0x101B     };
 unsigned int configKeyZ[MAX_BINDS]                = { 0x0025,     0x1007,     0x101A     };
+#endif
 unsigned int configKeyCUp[MAX_BINDS]              = { 0x0148,     VK_INVALID, VK_INVALID };
 unsigned int configKeyCDown[MAX_BINDS]            = { 0x0150,     VK_INVALID, VK_INVALID };
 unsigned int configKeyCLeft[MAX_BINDS]            = { 0x014B,     VK_INVALID, VK_INVALID };
@@ -134,6 +154,12 @@ bool         configBackgroundGamepad              = true;
 bool         configDisableGamepads                = false;
 bool         configUseStandardKeyBindingsChat     = false;
 bool         configSmoothScrolling                = false;
+#ifdef TOUCH_CONTROLS
+bool         configAutohideTouch                  = true;
+bool         configSlideTouch                     = true;
+bool         configPhantomTouch                   = false;
+bool         configSnapTouch                      = false;
+#endif
 // free camera settings
 bool         configEnableFreeCamera               = false;
 bool         configFreeCameraAnalog               = false;
@@ -372,6 +398,34 @@ static const struct ConfigOption options[] = {
     {.name = "rules_version",                  .type = CONFIG_TYPE_UINT,   .uintValue   = &configRulesVersion},
     {.name = "compress_on_startup",            .type = CONFIG_TYPE_BOOL,   .boolValue   = &configCompressOnStartup},
     {.name = "skip_pack_generation",           .type = CONFIG_TYPE_BOOL,   .boolValue   = &configSkipPackGeneration},
+#ifdef TOUCH_CONTROLS
+    // touch control settings
+    {.name = "touch_stick",                    .type = CONFIG_TYPE_TOUCH,  .touchValues = &configControlElements[TOUCH_STICK]},
+    {.name = "touch_mouse",                    .type = CONFIG_TYPE_TOUCH,  .touchValues = &configControlElements[TOUCH_MOUSE]},
+    {.name = "touch_a",                        .type = CONFIG_TYPE_TOUCH,  .touchValues = &configControlElements[TOUCH_A]},
+    {.name = "touch_b",                        .type = CONFIG_TYPE_TOUCH,  .touchValues = &configControlElements[TOUCH_B]},
+    {.name = "touch_x",                        .type = CONFIG_TYPE_TOUCH,  .touchValues = &configControlElements[TOUCH_X]},
+    {.name = "touch_y",                        .type = CONFIG_TYPE_TOUCH,  .touchValues = &configControlElements[TOUCH_Y]},
+    {.name = "touch_start",                    .type = CONFIG_TYPE_TOUCH,  .touchValues = &configControlElements[TOUCH_START]},
+    {.name = "touch_l",                        .type = CONFIG_TYPE_TOUCH,  .touchValues = &configControlElements[TOUCH_L]},
+    {.name = "touch_r",                        .type = CONFIG_TYPE_TOUCH,  .touchValues = &configControlElements[TOUCH_R]},
+    {.name = "touch_z",                        .type = CONFIG_TYPE_TOUCH,  .touchValues = &configControlElements[TOUCH_Z]},
+    {.name = "touch_cup",                      .type = CONFIG_TYPE_TOUCH,  .touchValues = &configControlElements[TOUCH_CUP]},
+    {.name = "touch_cdown",                    .type = CONFIG_TYPE_TOUCH,  .touchValues = &configControlElements[TOUCH_CDOWN]},
+    {.name = "touch_cleft",                    .type = CONFIG_TYPE_TOUCH,  .touchValues = &configControlElements[TOUCH_CLEFT]},
+    {.name = "touch_cright",                   .type = CONFIG_TYPE_TOUCH,  .touchValues = &configControlElements[TOUCH_CRIGHT]},
+    {.name = "touch_chat",                     .type = CONFIG_TYPE_TOUCH,  .touchValues = &configControlElements[TOUCH_CHAT]},
+    {.name = "touch_playerlist",               .type = CONFIG_TYPE_TOUCH,  .touchValues = &configControlElements[TOUCH_PLAYERLIST]},
+    {.name = "touch_dup",                      .type = CONFIG_TYPE_TOUCH,  .touchValues = &configControlElements[TOUCH_DUP]},
+    {.name = "touch_ddown",                    .type = CONFIG_TYPE_TOUCH,  .touchValues = &configControlElements[TOUCH_DDOWN]},
+    {.name = "touch_dleft",                    .type = CONFIG_TYPE_TOUCH,  .touchValues = &configControlElements[TOUCH_DLEFT]},
+    {.name = "touch_dright",                   .type = CONFIG_TYPE_TOUCH,  .touchValues = &configControlElements[TOUCH_DRIGHT]},
+    {.name = "touch_console",                  .type = CONFIG_TYPE_TOUCH,  .touchValues = &configControlElements[TOUCH_CONSOLE]},
+    {.name = "touch_autohide",                 .type = CONFIG_TYPE_BOOL,   .boolValue   = &configAutohideTouch},
+    {.name = "touch_slide",                    .type = CONFIG_TYPE_BOOL,   .boolValue   = &configSlideTouch},
+    {.name = "touch_phantom",                  .type = CONFIG_TYPE_BOOL,   .boolValue   = &configPhantomTouch},
+    {.name = "touch_snap",                     .type = CONFIG_TYPE_BOOL,   .boolValue   = &configSnapTouch},
+#endif
 };
 
 struct SecretConfigOption {
@@ -757,6 +811,18 @@ static void configfile_load_internal(const char *filename, bool* error) {
                                 (*option->colorValue)[i] = temp;
                             }
                             break;
+#ifdef TOUCH_CONTROLS
+                        case CONFIG_TYPE_TOUCH:
+                            sscanf(tokens[1], "%04x", &option->touchValues->x);
+                            sscanf(tokens[2], "%04x", &option->touchValues->y);
+                            sscanf(tokens[3], "%04x", &option->touchValues->size);
+                            sscanf(tokens[4], "%x",   &option->touchValues->anchor);
+                            sscanf(tokens[5], "%02x", &option->touchValues->r);
+                            sscanf(tokens[6], "%02x", &option->touchValues->g);
+                            sscanf(tokens[7], "%02x", &option->touchValues->b);
+                            sscanf(tokens[8], "%02x", &option->touchValues->a);
+                            break;
+#endif
                         default:
                             LOG_ERROR("Configfile read bad type '%d': %s", (int)option->type, line);
                             goto NEXT_OPTION;
@@ -867,6 +933,11 @@ static void configfile_save_option(FILE *file, const struct ConfigOption *option
         case CONFIG_TYPE_COLOR:
             fprintf(file, "%s %02x %02x %02x\n", option->name, (*option->colorValue)[0], (*option->colorValue)[1], (*option->colorValue)[2]);
             break;
+#ifdef TOUCH_CONTROLS
+        case CONFIG_TYPE_TOUCH:
+            fprintf(file, "%s %04x %04x %04x %x %02x %02x %02x %02x\n", option->name, option->touchValues->x, option->touchValues->y, option->touchValues->size, option->touchValues->anchor, option->touchValues->r, option->touchValues->g, option->touchValues->b, option->touchValues->a);
+            break;
+#endif
         default:
             LOG_ERROR("Configfile wrote bad type '%d': %s", (int)option->type, option->name);
             break;

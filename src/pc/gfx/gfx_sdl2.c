@@ -38,6 +38,10 @@
 #include "../cliopts.h"
 
 #include "pc/controller/controller_keyboard.h"
+#ifdef TOUCH_CONTROLS
+#include "pc/controller/controller_touchscreen.h"
+#include "pc/djui/djui_interactable.h"
+#endif
 #include "pc/controller/controller_sdl.h"
 #include "pc/controller/controller_bind_mapping.h"
 #include "pc/utils/misc.h"
@@ -63,6 +67,11 @@ static kb_callback_t kb_key_up = NULL;
 static void (*kb_all_keys_up)(void) = NULL;
 static void (*kb_text_input)(char*) = NULL;
 static void (*kb_text_editing)(char*, int) = NULL;
+#ifdef TOUCH_CONTROLS
+static void (*touch_down_callback)(void* event);
+static void (*touch_motion_callback)(void* event);
+static void (*touch_up_callback)(void* event);
+#endif
 
 static void (*m_scroll)(float, float) = NULL;
 
@@ -217,6 +226,38 @@ static void gfx_sdl_ondropfile(char* path) {
 #endif
 }
 
+#ifdef TOUCH_CONTROLS
+static void gfx_sdl_fingerdown(SDL_TouchFingerEvent sdl_event) {
+    struct TouchEvent event;
+    event.x = sdl_event.x;
+    event.y = sdl_event.y;
+    event.touchID = sdl_event.fingerId + 1;
+    if (touch_down_callback != NULL) {
+        touch_down_callback((void*)&event);
+    }
+}
+
+static void gfx_sdl_fingermotion(SDL_TouchFingerEvent sdl_event) {
+    struct TouchEvent event;
+    event.x = sdl_event.x;
+    event.y = sdl_event.y;
+    event.touchID = sdl_event.fingerId + 1;
+    if (touch_motion_callback != NULL) {
+        touch_motion_callback((void*)&event);
+    }
+}
+
+static void gfx_sdl_fingerup(SDL_TouchFingerEvent sdl_event) {
+    struct TouchEvent event;
+    event.x = sdl_event.x;
+    event.y = sdl_event.y;
+    event.touchID = sdl_event.fingerId + 1;
+    if (touch_up_callback != NULL) {
+        touch_up_callback((void*)&event);
+    }
+}
+#endif
+
 static void gfx_sdl_handle_events(void) {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
@@ -233,6 +274,17 @@ static void gfx_sdl_handle_events(void) {
             case SDL_KEYUP:
                 gfx_sdl_onkeyup(event.key.keysym.scancode);
                 break;
+#ifdef TOUCH_CONTROLS
+	    case SDL_FINGERDOWN:
+                gfx_sdl_fingerdown(event.tfinger);
+                break;
+	    case SDL_FINGERMOTION:
+                gfx_sdl_fingermotion(event.tfinger);
+                break;
+	    case SDL_FINGERUP:
+                gfx_sdl_fingerup(event.tfinger);
+                break;
+#endif
             case SDL_MOUSEWHEEL:
                 gfx_sdl_onscroll(event.wheel.preciseX, event.wheel.preciseY);
                 break;
@@ -278,6 +330,13 @@ void (*on_all_keys_up)(void), void (*on_text_input)(char*), void (*on_text_editi
     kb_text_editing = on_text_editing;
 }
 
+#ifdef TOUCH_CONTROLS
+static void gfx_sdl_set_touchscreen_callbacks(void (*down)(void* event), void (*motion)(void* event), void (*up)(void* event)) {
+    touch_down_callback = down;
+    touch_motion_callback = motion;
+    touch_up_callback = up;
+}
+#endif
 static void gfx_sdl_set_scroll_callback(void (*on_scroll)(float, float)) {
     m_scroll = on_scroll;
 }
@@ -348,6 +407,9 @@ static void gfx_sdl_set_cursor_visible(bool visible) { SDL_ShowCursor(visible ? 
 struct GfxWindowManagerAPI gfx_sdl = {
     gfx_sdl_init,
     gfx_sdl_set_keyboard_callbacks,
+#ifdef TOUCH_CONTROLS
+    gfx_sdl_set_touchscreen_callbacks,
+#endif
     gfx_sdl_set_scroll_callback,
     gfx_sdl_main_loop,
     gfx_sdl_get_dimensions,

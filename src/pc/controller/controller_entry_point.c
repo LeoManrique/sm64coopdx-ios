@@ -5,6 +5,7 @@
 #include "../configfile.h"
 
 #include "controller_keyboard.h"
+#include "controller_touchscreen.h"
 #include "controller_sdl.h"
 
 // Analog camera movement by Pathétique (github.com/vrmiguel), y0shin and Mors
@@ -15,6 +16,9 @@
 static struct ControllerAPI *controller_implementations[] = {
 #if defined(CAPI_SDL2) || defined(CAPI_SDL1)
     &controller_sdl,
+#endif
+#ifdef TOUCH_CONTROLS
+    &controller_touchscreen,
 #endif
     &controller_keyboard,
 };
