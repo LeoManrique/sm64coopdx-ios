@@ -206,7 +206,7 @@ Flow: app launches → `main_rom_handler()` scans write path → no ROM found �
 |------|---------|--------|
 | Hide "fullscreen" toggle in display settings | `src/pc/djui/djui_panel_display.c` | TODO |
 | Hide "mute on focus loss" in sound settings | `src/pc/djui/djui_panel_sound.c` | TODO |
-| Disable accelerometer-as-joystick | `src/pc/controller/controller_sdl2.c` | TODO |
+| Disable accelerometer-as-joystick | `src/pc/controller/controller_sdl2.c` | DONE (`SDL_HINT_ACCELEROMETER_AS_JOYSTICK` = "0") |
 | ~~Disable `SDL_StartTextInput()` on mobile~~ | `src/pc/gfx/gfx_sdl2.c` | NOT NEEDED (fixed via SDL2 patch instead) |
 | `pthread_cancel` -> `pthread_kill` (iOS compat) | `src/pc/thread.c` | TODO |
 | Add touch controls button to controls menu | `src/pc/djui/djui_panel_controls.c` | TODO |
