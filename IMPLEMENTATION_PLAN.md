@@ -60,7 +60,6 @@ cmake -G Xcode \
 ```
 sm64coopdx.app/
   sm64coopdx          (binary)
-  baserom.us.z64      (ROM — temporary, will use file picker)
   lang/               (language .ini files)
   dynos/              (DynOS packs)
   Info.plist
@@ -172,6 +171,7 @@ Text input (chat) still works via `SDL_TEXTINPUT` events (UIKit text field respo
 - [x] Touch controls auto-hide when gamepad active
 - [x] iPad gamepad support (no phantom keyboard events)
 - [x] iPhone + iPad both working with touch and gamepad
+- [x] ROM file picker (no bundled ROM, user imports via iOS document picker)
 
 ---
 
@@ -187,16 +187,18 @@ Ported from Android. See Phase 6 above for full details.
 
 Fixed iPadOS converting gamepad to keyboard events. See Phase 7 above for full details.
 
-#### ROM File Picker
+#### ROM File Picker — DONE
 
-Replace the bundled ROM approach with a user-facing file picker so the ROM is not distributed inside the app.
+Replaced the bundled ROM approach with a user-facing file picker so the ROM is not distributed inside the app.
 
 | Task | File(s) | Status |
 |------|---------|--------|
-| iOS document picker (UIDocumentPickerViewController) | `src/pc/platform_ios.m` | TODO |
-| Hook file picker into ROM loading flow | `src/pc/rom_checker.cpp`, `src/pc/loading.c` | TODO |
-| Remove ROM from CMake bundle | `CMakeLists.txt` | TODO |
-| Change "drag & drop" text to "Import ROM" | `src/pc/loading.c` | TODO |
+| iOS document picker (UIDocumentPickerViewController) | `src/pc/platform_ios.m` | DONE |
+| Hook file picker into ROM loading flow | `src/pc/loading.c` | DONE |
+| Remove ROM from CMake bundle | `CMakeLists.txt` | DONE |
+| Change "drag & drop" text to "Select ROM" | `src/pc/loading.c` | DONE |
+
+Flow: app launches → `main_rom_handler()` scans write path → no ROM found → loading screen shows "Select your Super Mario 64 (US) ROM file" → `UIDocumentPickerViewController` opens automatically → user selects `.z64` file → imported to temp dir → validated via MD5 → copied to app write path → game loads. On subsequent launches, ROM is found in write path and picker is skipped.
 
 ### P1 — Should Have
 
@@ -311,7 +313,7 @@ The Android port wraps the entire `controller_sdl2.c` in an `#ifdef TOUCH_CONTRO
 | Build system | Makefile + Gradle | CMake + Xcode |
 | Graphics | GLES 3.0 (upgraded from 2.0) | GLES 3.0 (same shader rewrite needed) |
 | Refresh rate | Standard 60Hz | ProMotion 120Hz via native UIKit API |
-| ROM handling | File-based | Bundle (temporary) -> File picker (planned) |
+| ROM handling | File-based | iOS document picker (UIDocumentPickerViewController) |
 | Distribution | APK sideload | Xcode sideload / AltStore / TrollStore |
 | Menu centering | Left-aligned (HANDHELD) | Centered (HANDHELD override for iOS) |
 | Touch controls | Implemented | Implemented (ported from Android) |
@@ -340,7 +342,8 @@ Modified files:
 - `src/pc/gfx/gfx_dummy.c` — touch callback stub
 - `src/pc/pc_main.c` — iOS refresh rate query, touch callback registration
 - `src/pc/platform.c` — `sys_resource_path()` iOS path
-- `src/pc/platform.h` — iOS function declaration
+- `src/pc/platform.h` — iOS function declarations (refresh rate, ROM picker)
+- `src/pc/loading.c` — iOS ROM file picker integration, platform.h include
 - `src/pc/rom_checker.cpp` — bundle scanning, directory guard
 - `src/pc/update_checker.c` — stubbed on iOS
 - `src/pc/controller/controller_entry_point.c` — touch controller registration
