@@ -26,6 +26,9 @@
 #include "thread.h"
 #include "controller/controller_api.h"
 #include "controller/controller_keyboard.h"
+#ifdef TOUCH_CONTROLS
+#include "controller/controller_touchscreen.h"
+#endif
 #include "controller/controller_mouse.h"
 #include "fs/fs.h"
 
@@ -551,6 +554,9 @@ int main(int argc, char *argv[]) {
         gfx_init(gWindowApi, gRenderApi, TITLE);
         gWindowApi->set_keyboard_callbacks(keyboard_on_key_down, keyboard_on_key_up, keyboard_on_all_keys_up,
             keyboard_on_text_input, keyboard_on_text_editing);
+#ifdef TOUCH_CONTROLS
+        gWindowApi->set_touchscreen_callbacks((void *)touch_down, (void *)touch_motion, (void *)touch_up);
+#endif
         gWindowApi->set_scroll_callback(mouse_on_scroll);
     }
 
