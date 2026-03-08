@@ -252,16 +252,6 @@ target_link_libraries(sm64coopdx
     "-framework CoreBluetooth"
 )
 
-# Bundle the ROM file into the app
-# TODO: Replace with a file picker UI so users can import their own ROM
-set(ROM_FILE ${GAME_ROOT}/baserom.us.z64)
-if(EXISTS ${ROM_FILE})
-    target_sources(sm64coopdx PRIVATE ${ROM_FILE})
-    set_source_files_properties(${ROM_FILE} PROPERTIES
-        MACOSX_PACKAGE_LOCATION Resources
-    )
-endif()
-
 # Copy game data files into the app bundle
 set(GAME_DATA_DIRS
     ${BUILD_PC_DIR}/lang
