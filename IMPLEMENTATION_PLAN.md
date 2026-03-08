@@ -180,6 +180,89 @@ Replace the bundled ROM approach with a user-facing file picker so the ROM is no
 | Disable `SDL_StartTextInput()` on mobile | `src/pc/gfx/gfx_sdl2.c` | TODO |
 | `pthread_cancel` -> `pthread_kill` (iOS compat) | `src/pc/thread.c` | TODO |
 | Add touch controls button to controls menu | `src/pc/djui/djui_panel_controls.c` | TODO |
+| GLES 3.0 shader rewrite (see details below) | `src/pc/gfx/gfx_opengl.c` | TODO |
+| Disable Mumble (not applicable on iOS) | `src/pc/pc_main.c` | TODO |
+| Skip fullscreen config persistence on iOS | `src/pc/configfile.c` | TODO |
+| Remove third bind slot for A/B/L/R/Z (avoids invalid button codes on mobile) | `src/pc/configfile.c` | TODO |
+| DJUI interactable: add `SCANCODE_BACK` as escape alternative | `src/pc/djui/djui_interactable.c` | TODO |
+| DJUI interactable: fix cursor update for touch input | `src/pc/djui/djui_interactable.c` | TODO |
+| DJUI interactable: Android-style focus begin hook for keyboard | `src/pc/djui/djui_interactable.c` | TODO |
+| Duplicate `controller_sdl2.c` for `TOUCH_CONTROLS` build | `src/pc/controller/controller_sdl2.c` | TODO |
+
+### P1 Details — GLES 3.0 Shader Rewrite
+
+The Android port rewrites `gfx_opengl.c` for GLES 3.0 compatibility. Since iOS also uses GLES 3.0, the same changes are needed. Without them, shaders may fail on some devices or produce rendering artifacts.
+
+| Change | From | To |
+|--------|------|----|
+| GLSL version | `#version 100` | `#version 300 es` |
+| Vertex attributes | `attribute` | `in` |
+| Vertex varyings | `varying` (VS) | `out` |
+| Fragment varyings | `varying` (FS) | `in` |
+| Fragment output | `gl_FragColor` | `out vec4 fragColor` + `fragColor = ...` |
+| Texture sampling | `texture2D()` | `texture()` |
+| TEX_OFFSET macro | `texture2D(tex, ...)` | `texture(tex, ...)` |
+| `sampleTex` param | `filter` (reserved in GLES 3) | `filterMode` |
+| VAO init guard | `vmajor >= 3 && !is_es` | `vmajor >= 3` (enable for ES 3.0+) |
+
+The Android port uses `#ifdef USE_GLES` / `#else` blocks with helper macros:
+```c
+#ifdef USE_GLES
+    #define ATTR "in"
+    #define VARYING_VS "out"
+    #define VARYING_FS "in"
+#else
+    #define ATTR "attribute"
+    #define VARYING_VS "varying"
+    #define VARYING_FS "varying"
+#endif
+```
+
+Reference: `sm64coopdx-android` commit `origin/android-dev`, diff in `src/pc/gfx/gfx_opengl.c`.
+
+### P1 Details — Mumble Disable
+
+Mumble (positional audio for VoIP) is not applicable on iOS. The Android port guards both calls:
+
+```c
+// In main_game_init():
+#ifndef TARGET_ANDROID
+    mumble_init();
+#endif
+
+// In main loop:
+#ifndef TARGET_ANDROID
+    mumble_update();
+#endif
+```
+
+Use `#ifndef TARGET_IOS` for the same effect.
+
+### P1 Details — Controller Binds Cleanup
+
+The Android port removes the third bind slot for several keys when `TOUCH_CONTROLS` is defined. The upstream third slot values (e.g., `0x1103` for configKeyA) are invalid button indices that exceed `MAX_JOYBUTTONS=32`, which can cause out-of-bounds access:
+
+```c
+#ifdef TOUCH_CONTROLS
+unsigned int configKeyA[MAX_BINDS] = { 0x0026, 0x1000, VK_INVALID };
+unsigned int configKeyB[MAX_BINDS] = { 0x0033, 0x1001, VK_INVALID };
+unsigned int configKeyL[MAX_BINDS] = { 0x002A, 0x1009, VK_INVALID };
+unsigned int configKeyR[MAX_BINDS] = { 0x0036, 0x100A, VK_INVALID };
+unsigned int configKeyZ[MAX_BINDS] = { 0x0025, 0x101A, VK_INVALID };
+#endif
+```
+
+### P1 Details — DJUI Interactable Changes
+
+The Android port makes three changes to `djui_interactable.c`:
+
+1. **Back button as escape**: `SCANCODE_BACK` treated same as `SCANCODE_ESCAPE` for panel navigation
+2. **Touch cursor update**: Calls `djui_interactable_cursor_update_active()` when `gInteractableMouseDown == NULL` to fix touch-based menu interaction
+3. **Focus begin hook**: On Android, skips overwriting `on_focus_begin` if the new callback is NULL, so the onscreen keyboard still appears for text input fields (e.g., player name)
+
+### P1 Details — Controller SDL2 Duplication
+
+The Android port wraps the entire `controller_sdl2.c` in an `#ifdef TOUCH_CONTROLS` / `#else` block. The `TOUCH_CONTROLS` version is a simplified copy that includes touch-specific headers and disables accelerometer. When porting, the iOS build should use this same pattern.
 
 ### P2 — Nice to Have
 
@@ -198,7 +281,7 @@ Replace the bundled ROM approach with a user-facing file picker so the ROM is no
 | Aspect | Android | iOS |
 |--------|---------|-----|
 | Build system | Makefile + Gradle | CMake + Xcode |
-| Graphics | GLES 2.0 | GLES 3.0 (required for shaders) |
+| Graphics | GLES 3.0 (upgraded from 2.0) | GLES 3.0 (same shader rewrite needed) |
 | Refresh rate | Standard 60Hz | ProMotion 120Hz via native UIKit API |
 | ROM handling | File-based | Bundle (temporary) -> File picker (planned) |
 | Distribution | APK sideload | Xcode sideload / AltStore / TrollStore |
