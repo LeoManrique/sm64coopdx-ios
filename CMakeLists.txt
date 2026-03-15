@@ -205,7 +205,9 @@ set(IOS_OBJC_FILES
     ${GAME_ROOT}/src/pc/platform_ios.m
 )
 
-add_executable(sm64coopdx MACOSX_BUNDLE ${ALL_SOURCES} ${IOS_OBJC_FILES})
+set(ASSET_CATALOG ${GAME_ROOT}/platform/ios/Assets.xcassets)
+
+add_executable(sm64coopdx MACOSX_BUNDLE ${ALL_SOURCES} ${IOS_OBJC_FILES} ${ASSET_CATALOG})
 
 # Files that include miniaudio.h need ObjC on iOS (AVFoundation headers)
 set_source_files_properties(
@@ -233,6 +235,8 @@ set_target_properties(sm64coopdx PROPERTIES
     XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET "15.0"
     XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.sm64coopdx.ios"
     XCODE_ATTRIBUTE_DEVELOPMENT_TEAM ""
+    XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_APPICON_NAME "AppIcon"
+    RESOURCE "${ASSET_CATALOG}"
 )
 
 # iOS frameworks
