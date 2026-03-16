@@ -191,15 +191,8 @@ endif()
 add_subdirectory(${GAME_ROOT}/lib/SDL2-source SDL2 EXCLUDE_FROM_ALL)
 include_directories(${GAME_ROOT}/lib/SDL2-source/include)
 
-# ---- Lua 5.3 (build from source for iOS) ----
-set(LUA_SRC_DIR ${GAME_ROOT}/lib/lua-5.3.6/src)
-file(GLOB LUA_SOURCES ${LUA_SRC_DIR}/*.c)
-# Remove lua.c and luac.c (standalone interpreter/compiler)
-list(FILTER LUA_SOURCES EXCLUDE REGEX "lua\\.c$")
-list(FILTER LUA_SOURCES EXCLUDE REGEX "luac\\.c$")
-add_library(lua53 STATIC ${LUA_SOURCES})
-target_include_directories(lua53 PUBLIC ${LUA_SRC_DIR})
-target_compile_definitions(lua53 PRIVATE LUA_USE_POSIX LUA_USE_IOS)
+# ---- Lua 5.3 (prebuilt static library for iOS) ----
+include_directories(${GAME_ROOT}/lib/lua/include)
 
 # ---- iOS App Bundle ----
 # iOS Objective-C sources
@@ -220,7 +213,7 @@ set_source_files_properties(
 target_link_libraries(sm64coopdx
     SDL2main
     SDL2-static
-    lua53
+    ${GAME_ROOT}/lib/lua/ios/liblua53.a
     z
 )
 
