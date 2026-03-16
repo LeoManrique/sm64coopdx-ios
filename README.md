@@ -16,3 +16,13 @@ sm64coopdx is moddable via Lua, similar to Roblox and Garry's Mod's Lua APIs. To
 
 ## Wiki
 The wiki is made using GitHub's wiki feature, you can go to the wiki tab or click [here](https://github.com/coop-deluxe/sm64coopdx/wiki).
+
+## iOS Port
+
+This fork adds iOS support with touch controls, gamepad support, and CoopNet online multiplayer.
+
+### Installation
+
+Download the latest `.ipa` from [Releases](https://github.com/LeoManrique/sm64coopdx-ios/releases) and sideload using [AltStore](https://altstore.io/), [SideStore](https://sidestore.io/), or similar tools.
+
+**Requirements:** iOS 15.0+, ARM64 device (iPhone/iPad), a base ROM for first launch.
