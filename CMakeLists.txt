@@ -37,6 +37,8 @@ add_compile_definitions(
     TARGET_IOS
     HANDHELD
     TOUCH_CONTROLS
+    COOPNET
+    JUICE_STATIC
 )
 
 # ---- Compiler flags ----
@@ -220,6 +222,12 @@ target_link_libraries(sm64coopdx
     SDL2-static
     lua53
     z
+)
+
+# CoopNet (prebuilt static libraries for iOS)
+target_link_libraries(sm64coopdx
+    ${GAME_ROOT}/lib/coopnet/ios/libcoopnet.a
+    ${GAME_ROOT}/lib/coopnet/ios/libjuice.a
 )
 
 # iOS app bundle properties
