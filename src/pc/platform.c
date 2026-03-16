@@ -301,6 +301,15 @@ const char *sys_user_path(void) {
     static char path[SYS_MAX_PATH] = { 0 };
     if ('\0' != path[0]) { return path; }
 
+#ifdef TARGET_IOS
+    // Use Documents/ so the directory is visible in the iOS Files app
+    const char *iosPath = platform_ios_get_user_path();
+    if (iosPath) {
+        strncpy(path, iosPath, SYS_MAX_PATH - 1);
+        return path;
+    }
+#endif
+
     char const *subdirs[] = { "sm64coopdx", "sm64ex-coop", "sm64coopdx", NULL };
 
     char *sdlPath = NULL;

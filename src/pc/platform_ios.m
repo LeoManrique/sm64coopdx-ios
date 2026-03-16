@@ -1,8 +1,44 @@
 #ifdef TARGET_IOS
 
 #import <UIKit/UIKit.h>
+#import <Foundation/Foundation.h>
 
+#include "platform.h"
 #include "rom_checker.h"
+
+// ---- Documents directory for Files app access ----
+
+const char *platform_ios_get_user_path(void) {
+    static char path[SYS_MAX_PATH] = { 0 };
+    if (path[0] != '\0') return path;
+
+    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    NSString *documentsDir = paths.firstObject;
+    if (!documentsDir) return NULL;
+
+    strncpy(path, [documentsDir UTF8String], SYS_MAX_PATH - 1);
+
+    // Migrate data from old SDL_GetPrefPath location (Library/Preferences/sm64coopdx/)
+    NSString *oldPath = [NSString stringWithFormat:@"%@/Library/Preferences/sm64coopdx", NSHomeDirectory()];
+    NSFileManager *fm = [NSFileManager defaultManager];
+    BOOL isDir = NO;
+
+    if ([fm fileExistsAtPath:oldPath isDirectory:&isDir] && isDir) {
+        NSArray *oldContents = [fm contentsOfDirectoryAtPath:oldPath error:nil];
+        if (oldContents.count > 0) {
+            for (NSString *item in oldContents) {
+                NSString *src = [oldPath stringByAppendingPathComponent:item];
+                NSString *dst = [documentsDir stringByAppendingPathComponent:item];
+                if (![fm fileExistsAtPath:dst]) {
+                    [fm moveItemAtPath:src toPath:dst error:nil];
+                }
+            }
+            [fm removeItemAtPath:oldPath error:nil];
+        }
+    }
+
+    return path;
+}
 
 unsigned int platform_ios_get_refresh_rate(void) {
     return (unsigned int)[UIScreen mainScreen].maximumFramesPerSecond;
