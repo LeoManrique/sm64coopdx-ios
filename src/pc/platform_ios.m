@@ -1,8 +1,24 @@
 #ifdef TARGET_IOS
 
 #import <UIKit/UIKit.h>
+#import <Foundation/Foundation.h>
 
+#include "platform.h"
 #include "rom_checker.h"
+
+// ---- Documents directory for Files app access ----
+
+const char *platform_ios_get_user_path(void) {
+    static char path[SYS_MAX_PATH] = { 0 };
+    if (path[0] != '\0') return path;
+
+    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    NSString *documentsDir = paths.firstObject;
+    if (!documentsDir) return NULL;
+
+    strncpy(path, [documentsDir UTF8String], SYS_MAX_PATH - 1);
+    return path;
+}
 
 unsigned int platform_ios_get_refresh_rate(void) {
     return (unsigned int)[UIScreen mainScreen].maximumFramesPerSecond;
