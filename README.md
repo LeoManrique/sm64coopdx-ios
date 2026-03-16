@@ -20,3 +20,13 @@ The wiki is made using GitHub's wiki feature, you can go to the wiki tab or clic
 
 ## Community
 We have an official Discord server open to the public [here](https://discord.gg/TJVKHS4).
+
+## iOS Port
+
+This fork adds iOS support with touch controls, gamepad support, and CoopNet online multiplayer.
+
+### Installation
+
+Download the latest `.ipa` from [Releases](https://github.com/LeoManrique/sm64coopdx-ios/releases) and sideload using [AltStore](https://altstore.io/), [SideStore](https://sidestore.io/), or similar tools.
+
+**Requirements:** iOS 15.0+, ARM64 device (iPhone/iPad), a base ROM for first launch.

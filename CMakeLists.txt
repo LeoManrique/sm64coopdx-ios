@@ -261,6 +261,7 @@ target_link_libraries(sm64coopdx
 set(GAME_DATA_DIRS
     ${BUILD_PC_DIR}/lang
     ${BUILD_PC_DIR}/dynos
+    ${GAME_ROOT}/palettes
 )
 foreach(DATA_DIR ${GAME_DATA_DIRS})
     if(EXISTS ${DATA_DIR})
