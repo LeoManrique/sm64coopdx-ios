@@ -58,6 +58,14 @@ float platform_ios_get_keyboard_height(void) {
     return sKeyboardHeight;
 }
 
+float platform_ios_get_safe_area_left(void) {
+    UIWindow *window = [UIApplication sharedApplication].keyWindow;
+    if (window) {
+        return (float)window.safeAreaInsets.left;
+    }
+    return 0.0f;
+}
+
 // ---- Documents directory for Files app access ----
 
 const char *platform_ios_get_user_path(void) {

@@ -525,12 +525,13 @@ void djui_chat_box_toggle(void) {
 
 #ifdef TARGET_IOS
 static void djui_chat_box_on_render_pre(struct DjuiBase* base, UNUSED bool* skipRender) {
+    float scale = djui_gfx_get_scale();
+
     float kbHeight = platform_ios_get_keyboard_height();
-    if (kbHeight > 0.0f) {
-        base->y.value = kbHeight / djui_gfx_get_scale();
-    } else {
-        base->y.value = 0.0f;
-    }
+    base->y.value = (kbHeight > 0.0f) ? kbHeight / scale : 0.0f;
+
+    float safeLeft = platform_ios_get_safe_area_left();
+    base->x.value = (safeLeft > 0.0f) ? safeLeft / scale : 0.0f;
 }
 #endif
 
