@@ -34,6 +34,7 @@ bool platform_ios_is_picker_active(void);
 const char *platform_ios_get_user_path(void);
 void platform_ios_init_keyboard_observer(void);
 float platform_ios_get_keyboard_height(void);
+float platform_ios_get_safe_area_left(void);
 #endif
 
 // shows an error message in some way and terminates the game
