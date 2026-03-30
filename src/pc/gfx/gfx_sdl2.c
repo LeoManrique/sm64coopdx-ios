@@ -43,6 +43,10 @@
 #include "pc/djui/djui_interactable.h"
 #endif
 #include "pc/controller/controller_sdl.h"
+#ifdef TARGET_IOS
+#include "pc/platform.h"
+#include "pc/djui/djui_chat_box.h"
+#endif
 #include "pc/controller/controller_bind_mapping.h"
 #include "pc/utils/misc.h"
 #include "pc/mods/mod_import.h"
@@ -130,6 +134,9 @@ static void gfx_sdl_init(const char *window_title) {
     SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
 #endif
     SDL_Init(SDL_INIT_VIDEO);
+#ifdef TARGET_IOS
+    platform_ios_init_keyboard_observer();
+#endif
     SDL_StartTextInput();
 
     if (configWindow.msaa > 0) {
@@ -228,6 +235,13 @@ static void gfx_sdl_ondropfile(char* path) {
 
 #ifdef TOUCH_CONTROLS
 static void gfx_sdl_fingerdown(SDL_TouchFingerEvent sdl_event) {
+#ifdef TARGET_IOS
+    // When the chat input is focused but the iOS keyboard was dismissed by
+    // gesture, any tap on screen should bring the keyboard back.
+    if (gDjuiChatBoxFocus) {
+        SDL_StartTextInput();
+    }
+#endif
     struct TouchEvent event;
     event.x = sdl_event.x;
     event.y = sdl_event.y;

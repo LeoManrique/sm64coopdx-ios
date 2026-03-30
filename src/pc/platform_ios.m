@@ -6,6 +6,58 @@
 #include "platform.h"
 #include "rom_checker.h"
 
+// ---- iOS software keyboard height tracking ----
+
+static float sKeyboardHeight = 0.0f;
+
+@interface SM64KeyboardObserver : NSObject
+@end
+
+@implementation SM64KeyboardObserver
+
+- (void)keyboardWillShow:(NSNotification *)notification {
+    NSDictionary *info = notification.userInfo;
+    CGRect frame = [info[UIKeyboardFrameEndUserInfoKey] CGRectValue];
+
+    // Convert keyboard frame to the app window's coordinate space
+    // This handles iPhone vs iPad, landscape vs portrait, floating keyboards, etc.
+    UIWindow *window = [UIApplication sharedApplication].keyWindow;
+    if (window) {
+        CGRect converted = [window convertRect:frame fromWindow:nil];
+        CGFloat overlap = CGRectGetMaxY(window.bounds) - CGRectGetMinY(converted);
+        sKeyboardHeight = (float)fmax(overlap, 0.0);
+    } else {
+        sKeyboardHeight = (float)CGRectGetHeight(frame);
+    }
+}
+
+- (void)keyboardWillHide:(NSNotification *)notification {
+    sKeyboardHeight = 0.0f;
+}
+
+@end
+
+static SM64KeyboardObserver *sKeyboardObserver = nil;
+
+void platform_ios_init_keyboard_observer(void) {
+    if (sKeyboardObserver) return;
+    sKeyboardObserver = [[SM64KeyboardObserver alloc] init];
+
+    NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
+    [nc addObserver:sKeyboardObserver
+           selector:@selector(keyboardWillShow:)
+               name:UIKeyboardWillShowNotification
+             object:nil];
+    [nc addObserver:sKeyboardObserver
+           selector:@selector(keyboardWillHide:)
+               name:UIKeyboardWillHideNotification
+             object:nil];
+}
+
+float platform_ios_get_keyboard_height(void) {
+    return sKeyboardHeight;
+}
+
 // ---- Documents directory for Files app access ----
 
 const char *platform_ios_get_user_path(void) {

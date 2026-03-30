@@ -7,6 +7,9 @@
 #include "pc/configfile.h"
 #include "djui.h"
 #include "engine/math_util.h"
+#ifdef TARGET_IOS
+#include "pc/platform.h"
+#endif
 
 struct DjuiChatBox* gDjuiChatBox = NULL;
 bool gDjuiChatBoxFocus = false;
@@ -520,6 +523,17 @@ void djui_chat_box_toggle(void) {
     gDjuiChatBox->chatFlow->base.y.value = gDjuiChatBox->chatContainer->base.elem.height - gDjuiChatBox->chatFlow->base.height.value;
 }
 
+#ifdef TARGET_IOS
+static void djui_chat_box_on_render_pre(struct DjuiBase* base, UNUSED bool* skipRender) {
+    float kbHeight = platform_ios_get_keyboard_height();
+    if (kbHeight > 0.0f) {
+        base->y.value = kbHeight / djui_gfx_get_scale();
+    } else {
+        base->y.value = 0.0f;
+    }
+}
+#endif
+
 struct DjuiChatBox* djui_chat_box_create(void) {
     if (gDjuiChatBox != NULL) {
         djui_base_destroy(&gDjuiChatBox->base);
@@ -535,6 +549,9 @@ struct DjuiChatBox* djui_chat_box_create(void) {
     djui_base_set_alignment(base, DJUI_HALIGN_LEFT, DJUI_VALIGN_BOTTOM);
     djui_base_set_color(base, 0, 0, 0, 0);
     djui_base_set_padding(base, 0, 8, 8, 8);
+#ifdef TARGET_IOS
+    base->on_render_pre = djui_chat_box_on_render_pre;
+#endif
 
     struct DjuiRect* chatContainer = djui_rect_create(base);
     struct DjuiBase* ccBase = &chatContainer->base;
