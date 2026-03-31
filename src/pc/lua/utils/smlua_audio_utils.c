@@ -19,6 +19,7 @@
 #include "pc/pc_main.h"
 #include "pc/fs/fmem.h"
 
+
 struct AudioOverride {
     bool enabled;
     bool loaded;
@@ -184,9 +185,21 @@ static struct DynamicPool *sModAudioPool;
 static void smlua_audio_custom_init(void) {
     sModAudioPool = dynamic_pool_init();
 
-    ma_result result = ma_engine_init(NULL, &sModAudioEngine);
+    ma_engine_config engineConfig = ma_engine_config_init();
+
+#ifdef TARGET_IOS
+    // On iOS, SDL2 owns the Core Audio session (AudioQueue). If miniaudio creates
+    // its own device (AudioUnit) it conflicts and kills all game audio. Run in
+    // noDevice mode and mix the output into the game's audio buffer instead.
+    engineConfig.noDevice   = MA_TRUE;
+    engineConfig.channels   = 2;
+    engineConfig.sampleRate = 32000; // match game audio sample rate
+#endif
+
+    ma_result result = ma_engine_init(&engineConfig, &sModAudioEngine);
     if (result != MA_SUCCESS) {
         LOG_ERROR("failed to init Miniaudio: %d", result);
+        return;
     }
 }
 
@@ -662,3 +675,25 @@ void smlua_audio_custom_deinit(void) {
         sModAudioPool = NULL;
     }
 }
+
+#ifdef TARGET_IOS
+void audio_custom_mix_s16(s16* buffer, u32 frameCount) {
+    if (!sModAudioPool) { return; }
+
+    float tempBuf[2560]; // enough for 1280 stereo frames
+    if (frameCount > 1280) { frameCount = 1280; }
+
+    ma_uint64 framesRead = 0;
+    ma_engine_read_pcm_frames(&sModAudioEngine, tempBuf, frameCount, &framesRead);
+
+    for (ma_uint64 i = 0; i < framesRead * 2; i++) {
+        float s = tempBuf[i];
+        if (s >  1.0f) { s =  1.0f; }
+        if (s < -1.0f) { s = -1.0f; }
+        s32 mixed = (s32)buffer[i] + (s32)(s * 32767.0f);
+        if (mixed >  32767) { mixed =  32767; }
+        if (mixed < -32768) { mixed = -32768; }
+        buffer[i] = (s16)mixed;
+    }
+}
+#endif

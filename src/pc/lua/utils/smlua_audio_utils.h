@@ -76,4 +76,8 @@ void audio_custom_update_volume(void);
 void audio_custom_shutdown(void);
 void smlua_audio_custom_deinit(void);
 
+#ifdef TARGET_IOS
+void audio_custom_mix_s16(s16* buffer, u32 frameCount);
+#endif
+
 #endif

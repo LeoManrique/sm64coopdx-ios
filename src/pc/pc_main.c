@@ -330,6 +330,9 @@ inline static void buffer_audio(void) {
         for (u16 i=0; i < ARRAY_COUNT(sAudioBuffer); i++) {
             sAudioBuffer[i] *= gMasterVolume;
         }
+#ifdef TARGET_IOS
+        audio_custom_mix_s16(sAudioBuffer, 2 * numAudioSamples);
+#endif
         audio_api->play((u8 *)sAudioBuffer, 2 * numAudioSamples * 4);
     }
 }
