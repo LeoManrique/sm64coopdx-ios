@@ -48,13 +48,66 @@ static void djui_panel_touch_controls_editor_update_anchor(struct DjuiBase* call
     djui_base_set_enabled(&sTouchConfigSliderS->base, enabled);
 }
 
+static struct DjuiButton* sFloatingDoneButton = NULL;
+static f32 sMoveStartCursorX = 0;
+static f32 sMoveStartCursorY = 0;
+static f32 sMoveStartBtnX = 0;
+static f32 sMoveStartBtnY = 0;
+static bool sMoveDragging = false;
+
+static void move_floating_destroy(void) {
+    if (sFloatingDoneButton) {
+        djui_base_destroy(&sFloatingDoneButton->base);
+        sFloatingDoneButton = NULL;
+    }
+}
+
+static void move_done_begin(struct DjuiBase* base, UNUSED bool inputCursor) {
+    (void)base;
+    sMoveStartCursorX = gCursorX;
+    sMoveStartCursorY = gCursorY;
+    sMoveStartBtnX = sFloatingDoneButton->base.x.value;
+    sMoveStartBtnY = sFloatingDoneButton->base.y.value;
+    sMoveDragging = false;
+}
+
+static void move_done_update(UNUSED struct DjuiBase* base) {
+    f32 dx = gCursorX - sMoveStartCursorX;
+    f32 dy = gCursorY - sMoveStartCursorY;
+    if (dx * dx + dy * dy > 100.0f) { sMoveDragging = true; }
+    if (sMoveDragging && sFloatingDoneButton) {
+        sFloatingDoneButton->base.x.value = sMoveStartBtnX + dx;
+        sFloatingDoneButton->base.y.value = sMoveStartBtnY + dy;
+    }
+}
+
+static void move_done_end(struct DjuiBase* base) {
+    if (!sMoveDragging) {
+        move_floating_destroy();
+        djui_panel_menu_back(base);
+    }
+}
+
+static void djui_panel_move_on_destroy(UNUSED struct DjuiBase* base) {
+    move_floating_destroy();
+}
+
 static void djui_panel_touch_controls_editor_move(struct DjuiBase* caller) {
-    struct DjuiThreePanel* panel = djui_panel_menu_create(DLANG(CONTROLS, CONTROLS), false);
-    djui_base_set_size(&panel->base, DJUI_DEFAULT_PANEL_WIDTH * 1.3f, 0.15f);
-    djui_base_set_alignment(&panel->base, DJUI_HALIGN_CENTER, DJUI_VALIGN_TOP);
+    // Create an invisible panel just for the back-navigation stack
+    struct DjuiThreePanel* panel = djui_panel_menu_create("", false);
+    djui_base_set_size(&panel->base, 1, 1);
     djui_base_set_color(&panel->base, 0, 0, 0, 0);
     djui_base_set_border_color(&panel->base, 0, 0, 0, 0);
-    djui_panel_add(caller, panel, NULL);
+    struct DjuiPanel* p = djui_panel_add(caller, panel, NULL);
+    if (p) { p->on_panel_destroy = djui_panel_move_on_destroy; }
+
+    // Create a floating Done button on the root, free from panel positioning
+    sFloatingDoneButton = djui_button_create(&gDjuiRoot->base, "Done", DJUI_BUTTON_STYLE_BACK, NULL);
+    djui_base_set_size_type(&sFloatingDoneButton->base, DJUI_SVT_ABSOLUTE, DJUI_SVT_ABSOLUTE);
+    djui_base_set_size(&sFloatingDoneButton->base, 200, 64);
+    djui_base_set_location_type(&sFloatingDoneButton->base, DJUI_SVT_ABSOLUTE, DJUI_SVT_ABSOLUTE);
+    djui_base_set_location(&sFloatingDoneButton->base, gDjuiRoot->base.elem.width / 2.0f - 100, gDjuiRoot->base.elem.height / 2.0f - 32);
+    djui_interactable_hook_cursor_down(&sFloatingDoneButton->base, move_done_begin, move_done_update, move_done_end);
 }
 
 static bool djui_panel_touch_controls_editor_leave_menu(UNUSED struct DjuiBase* base) {
@@ -72,10 +125,6 @@ static void djui_panel_touch_controls_editor_set_alpha(UNUSED struct DjuiBase* b
 void djui_panel_touch_controls_editor_create(struct DjuiBase* caller) {
     struct DjuiThreePanel* panel = djui_panel_menu_create(DLANG(CONTROLS, CONTROLS), false);
     struct DjuiBase* body = djui_three_panel_get_body(panel);
-    djui_base_set_size(&panel->base, (DJUI_DEFAULT_PANEL_WIDTH * 1.3f) / 1.25f, 0.921f * 0.65f * 4.f);
-    djui_base_set_alignment(&panel->base, DJUI_HALIGN_CENTER, DJUI_VALIGN_CENTER);
-    djui_base_set_color(&panel->base, panel->base.color.r, panel->base.color.g, panel->base.color.b, panel->base.color.a - 50);
-    djui_base_set_border_color(&panel->base, panel->base.borderColor.r, panel->base.borderColor.g, panel->base.borderColor.b, panel->base.borderColor.a - 50);
 
     gInTouchConfig = true;
     gSelectedTouchElement = TOUCH_MOUSE;
@@ -112,16 +161,9 @@ void djui_panel_touch_controls_editor_create(struct DjuiBase* caller) {
             djui_base_set_enabled(&sTouchConfigSliderS->base, false);
         }
 
-        {
-            struct DjuiButton* applyAButton = djui_button_create(body, "Apply Opacity to All", DJUI_BUTTON_STYLE_NORMAL, djui_panel_touch_controls_editor_set_alpha);
-            djui_base_set_size(&applyAButton->base, 1.0f, 36);
-            struct DjuiButton* backButton = djui_button_left_create(body, DLANG(MENU, BACK), DJUI_BUTTON_STYLE_BACK, djui_panel_menu_back);
-            djui_base_set_size(&backButton->base, 0.97f / 2.0f, 48);
-            djui_base_set_alignment(&backButton->base, DJUI_HALIGN_LEFT, DJUI_VALIGN_BOTTOM);
-            struct DjuiButton* moveButton = djui_button_right_create(body, "Move" /*DLANG(TOUCH_CONTROLS, TOUCH_CONTROLS_MOVE)*/, DJUI_BUTTON_STYLE_BACK, djui_panel_touch_controls_editor_move);
-            djui_base_set_size(&moveButton->base, 0.97f / 2.0f, 48);
-            djui_base_set_alignment(&moveButton->base, DJUI_HALIGN_RIGHT, DJUI_VALIGN_BOTTOM);
-        }
+        djui_button_create(body, "Apply Opacity to All", DJUI_BUTTON_STYLE_NORMAL, djui_panel_touch_controls_editor_set_alpha);
+        djui_button_create(body, "Move", DJUI_BUTTON_STYLE_NORMAL, djui_panel_touch_controls_editor_move);
+        djui_button_create(body, DLANG(MENU, BACK), DJUI_BUTTON_STYLE_BACK, djui_panel_menu_back);
     }
 
     panel->on_back = djui_panel_touch_controls_editor_leave_menu; 
