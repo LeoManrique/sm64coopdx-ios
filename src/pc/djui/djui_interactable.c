@@ -479,8 +479,14 @@ void djui_interactable_update(void) {
     } else if ((padButtons & PAD_BUTTON_A) || (mouseButtons & L_MOUSE_BUTTON)) {
         // cursor down events
 #ifdef TOUCH_CONTROLS
-        if (gInteractableMouseDown == NULL)
+        if (gInteractableMouseDown == NULL) {
             djui_interactable_cursor_update_active(&gDjuiRoot->base);
+            if (gDjuiHovered == NULL) {
+                // Touch started on a non-DJUI element (e.g. touch control button).
+                // Stop scanning so dragging over DJUI elements won't capture them.
+                sIgnoreInteractableUntilCursorReleased = true;
+            }
+        }
 #endif
         if (gDjuiHovered != NULL) {
             gInteractableMouseDown = gDjuiHovered;
