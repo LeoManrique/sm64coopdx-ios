@@ -527,10 +527,15 @@ void djui_chat_box_toggle(void) {
 static void djui_chat_box_on_render_pre(struct DjuiBase* base, UNUSED bool* skipRender) {
     float scale = djui_gfx_get_scale();
 
-    float kbHeight = platform_ios_get_keyboard_height();
+    // UIKit returns points; convert to pixels for HiDPI-aware DJUI scale
+    extern void gfx_sdl_get_hidpi_scale(float *sx, float *sy);
+    float hidpi_sx, hidpi_sy;
+    gfx_sdl_get_hidpi_scale(&hidpi_sx, &hidpi_sy);
+
+    float kbHeight = platform_ios_get_keyboard_height() * hidpi_sy;
     base->y.value = (kbHeight > 0.0f) ? kbHeight / scale : 0.0f;
 
-    float safeLeft = platform_ios_get_safe_area_left();
+    float safeLeft = platform_ios_get_safe_area_left() * hidpi_sx;
     base->x.value = (safeLeft > 0.0f) ? safeLeft / scale : 0.0f;
 }
 #endif
