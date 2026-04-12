@@ -95,6 +95,13 @@ void controller_mouse_read_window(void) {
     }
 #else
     mouse_window_buttons = SDL_GetMouseState(&mouse_window_x, &mouse_window_y);
+#if defined(CAPI_SDL2)
+    extern void gfx_sdl_get_hidpi_scale(float *sx, float *sy);
+    float hidpi_sx = 1.0f, hidpi_sy = 1.0f;
+    gfx_sdl_get_hidpi_scale(&hidpi_sx, &hidpi_sy);
+    mouse_window_x = (s32)(mouse_window_x * hidpi_sx);
+    mouse_window_y = (s32)(mouse_window_y * hidpi_sy);
+#endif
     mouse_window_x -= gfx_current_dimensions.x_adjust_4by3;
 #endif
 }
