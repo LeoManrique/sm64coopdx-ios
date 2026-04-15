@@ -341,6 +341,11 @@ static void gfx_sdl_handle_events(void) {
 	    case SDL_FINGERUP:
                 gfx_sdl_fingerup(event.tfinger);
                 break;
+	    case SDL_MULTIGESTURE:
+                if (event.mgesture.numFingers == 2) {
+                    touch_pinch(event.mgesture.dDist);
+                }
+                break;
 #endif
             case SDL_MOUSEWHEEL:
                 gfx_sdl_onscroll(event.wheel.preciseX, event.wheel.preciseY);

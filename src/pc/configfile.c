@@ -270,6 +270,9 @@ unsigned int configDjuiScale                      = 0;
 // other
 unsigned int configRulesVersion                   = 0;
 bool         configHideSocketWarning              = false;
+#ifdef TOUCH_CONTROLS
+unsigned int configTouchVersion                    = 0;
+#endif
 bool         configCompressOnStartup              = false;
 bool         configSkipPackGeneration             = false;
 
@@ -431,6 +434,9 @@ static const struct ConfigOption options[] = {
     // other
     {.name = "rules_version",                  .type = CONFIG_TYPE_UINT,   .uintValue   = &configRulesVersion},
     {.name = "hide_socket_warning",            .type = CONFIG_TYPE_BOOL,   .boolValue   = &configHideSocketWarning},
+#ifdef TOUCH_CONTROLS
+    {.name = "touch_version",                  .type = CONFIG_TYPE_UINT,   .uintValue   = &configTouchVersion},
+#endif
     {.name = "compress_on_startup",            .type = CONFIG_TYPE_BOOL,   .boolValue   = &configCompressOnStartup},
     {.name = "skip_pack_generation",           .type = CONFIG_TYPE_BOOL,   .boolValue   = &configSkipPackGeneration},
 #ifdef TOUCH_CONTROLS
@@ -968,6 +974,20 @@ void configfile_load(void) {
         configfile_load_internal(configfile_backup_name(), &configReadError);
     } else {
         configfile_save(configfile_backup_name());
+    }
+#endif
+
+#ifdef TOUCH_CONTROLS
+    // One-time migration: old format stored size as bit-shift exponent (0-8);
+    // new format is permille (100-500, value/100 = magnification).
+    if (configTouchVersion < 1) {
+        for (int i = 0; i < TOUCH_COUNT; i++) {
+            if (configControlElements[i].size < 50) {
+                configControlElements[i].size = configControlElements[i].size * 200;
+                if (configControlElements[i].size < 100) configControlElements[i].size = 200;
+            }
+        }
+        configTouchVersion = 1;
     }
 #endif
 }

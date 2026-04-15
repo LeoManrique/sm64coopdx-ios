@@ -182,6 +182,9 @@ extern unsigned int configDjuiScale;
 // other
 extern unsigned int configRulesVersion;
 extern bool         configHideSocketWarning;
+#ifdef TOUCH_CONTROLS
+extern unsigned int configTouchVersion;
+#endif
 extern bool         configCompressOnStartup;
 extern bool         configSkipPackGeneration;
 
