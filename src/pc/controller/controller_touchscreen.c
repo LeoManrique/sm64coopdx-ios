@@ -31,6 +31,8 @@
 #include "controller_api.h"
 #include "controller_touchscreen.h"
 #include "controller_touchscreen_textures.h"
+#include "pc/djui/djui_gfx.h"
+#include "game/ingame_menu.h"
 
 #include "pc/configfile.h"
 
@@ -157,15 +159,90 @@ void move_touch_element(struct TouchEvent *event, enum ConfigControlElementIndex
     }
 }
 
+// Custom pinch tracking — more reliable than SDL_MULTIGESTURE on iOS.
+// Tracks the two most recent fingers and converts distance change into size delta.
+typedef struct { SDL_TouchID id; f32 x, y; } PinchFinger;
+static PinchFinger sPinchFingers[2] = {{0,0,0},{0,0,0}};
+static f32 sLastPinchDist = -1.0f;
+static f32 sPinchAccumulator = 0.0f;
+
+static f32 pinch_compute_dist(void) {
+    f32 dx = (sPinchFingers[0].x - sPinchFingers[1].x) * (f32)SCREEN_WIDTH_API;
+    f32 dy = (sPinchFingers[0].y - sPinchFingers[1].y) * (f32)SCREEN_HEIGHT_API;
+    return sqrtf(dx*dx + dy*dy);
+}
+
+static void pinch_finger_down(SDL_TouchID id, f32 x, f32 y) {
+    for (int i = 0; i < 2; i++) {
+        if (sPinchFingers[i].id == 0) {
+            sPinchFingers[i].id = id;
+            sPinchFingers[i].x = x;
+            sPinchFingers[i].y = y;
+            if (sPinchFingers[0].id != 0 && sPinchFingers[1].id != 0) {
+                sLastPinchDist = pinch_compute_dist();
+                sPinchAccumulator = 0.0f;
+            }
+            return;
+        }
+    }
+}
+
+static void pinch_finger_motion(SDL_TouchID id, f32 x, f32 y) {
+    for (int i = 0; i < 2; i++) {
+        if (sPinchFingers[i].id == id) {
+            sPinchFingers[i].x = x;
+            sPinchFingers[i].y = y;
+            break;
+        }
+    }
+    if (sPinchFingers[0].id == 0 || sPinchFingers[1].id == 0) return;
+    if (!gInTouchConfig) return;
+    if (gSelectedTouchElement >= TOUCH_COUNT) return;
+    if (controlElements[gSelectedTouchElement].type == Mouse) return;
+
+    f32 dist = pinch_compute_dist();
+    if (sLastPinchDist < 0) { sLastPinchDist = dist; return; }
+    f32 dDist = dist - sLastPinchDist;
+    sLastPinchDist = dist;
+
+    // Map pixel-distance delta to size delta. ~1 size unit per pixel of finger separation change.
+    sPinchAccumulator += dDist * 0.5f;
+    s32 delta = (s32)sPinchAccumulator;
+    if (delta == 0) return;
+    sPinchAccumulator -= (f32)delta;
+
+    ConfigControlElement *elem = &configControlElements[gSelectedTouchElement];
+    s32 newSize = (s32)elem->size + delta;
+    if (newSize < 50) newSize = 50;
+    if (newSize > 500) newSize = 500;
+    elem->size = (u32)newSize;
+}
+
+static void pinch_finger_up(SDL_TouchID id) {
+    for (int i = 0; i < 2; i++) {
+        if (sPinchFingers[i].id == id) {
+            sPinchFingers[i].id = 0;
+            sLastPinchDist = -1.0f;
+            sPinchAccumulator = 0.0f;
+            break;
+        }
+    }
+}
+
+void touch_pinch(UNUSED f32 dDist) {
+    // Kept for SDL_MULTIGESTURE wiring; custom tracking handles the actual pinch.
+}
+
 void touch_down(struct TouchEvent* event) {
     gGamepadActive = false;
+    pinch_finger_down(event->touchID, event->x, event->y);
     struct Position pos;
     s32 size;
     for(u32 i = 0; i < controlElementsLength; i++) {
         if (controlElements[i].touchID == 0) {
             pos = get_pos(&configControlElements[i]);
             if (pos.y == HIDE_POS) continue;
-            size = configControlElements[i].size * 100;
+            size = (s32)((f32)configControlElements[i].size / 100.0f * 50.0f);
             if (!TRIGGER_DETECT(size)) continue;
             switch (controlElements[i].type) {
                 case Joystick:
@@ -194,14 +271,17 @@ void touch_down(struct TouchEvent* event) {
 }
 
 void touch_motion(struct TouchEvent* event) {
+    pinch_finger_motion(event->touchID, event->x, event->y);
     struct Position pos;
     s32 size;
     for(u32 i = 0; i < controlElementsLength; i++) {
         pos = get_pos(&configControlElements[i]);
         if (pos.y == HIDE_POS) continue;
-        size = configControlElements[i].size * 100;
+        size = (s32)((f32)configControlElements[i].size / 100.0f * 50.0f);
         if (gInTouchConfig) {
-            if (controlElements[i].touchID == event->touchID && controlElements[i].type != Mouse && gSelectedTouchElement == i) {
+            // Don't drag while pinching with 2 fingers
+            bool pinching = (sPinchFingers[0].id != 0 && sPinchFingers[1].id != 0);
+            if (!pinching && controlElements[i].touchID == event->touchID && controlElements[i].type != Mouse && gSelectedTouchElement == i) {
                 move_touch_element(event, gSelectedTouchElement);
             }
         } else {
@@ -302,6 +382,7 @@ static void handle_touch_up(u32 i) { // separated for when the layout changes
 }
 
 void touch_up(struct TouchEvent* event) {
+    pinch_finger_up(event->touchID);
     for(u32 i = 0; i < controlElementsLength; i++) {
         if (controlElements[i].touchID == event->touchID) {
             handle_touch_up(i);
@@ -309,26 +390,24 @@ void touch_up(struct TouchEvent* event) {
     }
 }
 
-static void render_texture(const Texture *texture, s32 x, s32 y, u32 w, u32 h, s32 scaling, u8 r, u8 g, u8 b, u8 a) {
-    gSPClearGeometryMode(gDisplayListHead++, G_LIGHTING);
-    gDPSetCombineMode(gDisplayListHead++, G_CC_FADEA, G_CC_FADEA);
-    gDPSetRenderMode(gDisplayListHead++, G_RM_XLU_SURF, G_RM_XLU_SURF2);
-    gDPSetTextureFilter(gDisplayListHead++, G_TF_POINT);
-    gSPTexture(gDisplayListHead++, 0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_ON);
+static void render_texture(const Texture *texture, s32 x, s32 y, u32 w, u32 h, f32 scale, u8 r, u8 g, u8 b, u8 a) {
+    // Render via matrix-transformed quad (float precision) instead of gSPTextureRectangle
+    // (integer dsdx quantization). The touch coord system is 4x SCREEN_WIDTH (U10.2-style),
+    // so divide by 4 to get ortho-space SCREEN units. Ortho Y is flipped (up = +y).
+    f32 full_w = (f32)w * scale;
+    f32 full_h = (f32)h * scale;
+    f32 cx = (f32)x * 0.25f;
+    f32 cy = (f32)y * 0.25f;
+    f32 tx = cx - full_w * 0.5f;
+    f32 ty = (f32)SCREEN_HEIGHT - cy + full_h * 0.5f;
 
-    gDPSetTextureImage(gDisplayListHead++, G_IM_FMT_RGBA, G_IM_SIZ_16b, 1, texture);
-
-    gDPSetTile(gDisplayListHead++, G_IM_FMT_RGBA, G_IM_SIZ_16b, 0, 0, G_TX_LOADTILE, 0, G_TX_WRAP | G_TX_NOMIRROR, 0, G_TX_NOLOD, G_TX_WRAP | G_TX_NOMIRROR, 0, G_TX_NOLOD);
-    gDPLoadBlock(gDisplayListHead++, G_TX_LOADTILE, 0, 0, w * h - 1, CALC_DXT(w, G_IM_SIZ_16b_BYTES));
-    gDPSetTile(gDisplayListHead++, G_IM_FMT_RGBA, G_IM_SIZ_16b, w / 4, 0, G_TX_RENDERTILE, 0, G_TX_CLAMP | G_TX_NOMIRROR, log2(w), G_TX_NOLOD, G_TX_CLAMP | G_TX_NOMIRROR, log2(h), G_TX_NOLOD);
-    gDPSetTileSize(gDisplayListHead++, 0, 0, 0, (w - 1) << G_TEXTURE_IMAGE_FRAC, (w - 1) << G_TEXTURE_IMAGE_FRAC);
+    create_dl_translation_matrix(DJUI_MTX_PUSH, tx, ty, 0);
+    create_dl_scale_matrix(DJUI_MTX_NOPUSH, full_w, full_h, 1.0f);
 
     gDPSetEnvColor(gDisplayListHead++, r, g, b, a);
+    djui_gfx_render_texture(texture, w, h, G_IM_FMT_RGBA, G_IM_SIZ_16b, false);
 
-    gSPTextureRectangle(gDisplayListHead++, x - (w << scaling), y - (h << scaling), x + (w << scaling), y + (h << scaling), G_TX_RENDERTILE, 0, 0, 4 << (9 - scaling), 1 << (11 - scaling));
-
-    gSPTexture(gDisplayListHead++, 0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_OFF);
-    gDPSetCombineMode(gDisplayListHead++, G_CC_SHADE, G_CC_SHADE);
+    gSPPopMatrix(gDisplayListHead++, G_MTX_MODELVIEW);
 }
 
 void render_touch_controls(void) {
@@ -337,7 +416,6 @@ void render_touch_controls(void) {
     struct Position pos;
     struct Position stick;
     Colors color;
-    s32 size;
     f32 normalizedVectorMultiplier;
     
     create_dl_ortho_matrix();
@@ -345,7 +423,7 @@ void render_touch_controls(void) {
     for (u32 i = 0; i < controlElementsLength; i++) {
         pos = get_pos(&configControlElements[i]);
         color = get_color(&configControlElements[i]);
-        size = configControlElements[i].size;
+        f32 scale = (f32)configControlElements[i].size / 100.0f;
         if (pos.y == HIDE_POS) continue;
         switch (controlElements[i].type) {
             case Joystick:
@@ -361,16 +439,16 @@ void render_touch_controls(void) {
                     stick.x = (controlElements[i].joyX * normalizedVectorMultiplier * 2);
                     stick.y = (controlElements[i].joyY * normalizedVectorMultiplier * 2);
                 }
-                render_texture(touch_textures[TEXTURE_TOUCH_JOYSTICK_BASE], pos.x, pos.y, 32, 32, 1 + size, color.r, color.g, color.b, color.a);
-                render_texture(touch_textures[TEXTURE_TOUCH_JOYSTICK], pos.x + stick.x, pos.y + stick.y, 16, 16, 1 + size, color.r, color.g, color.b, color.a);
+                render_texture(touch_textures[TEXTURE_TOUCH_JOYSTICK_BASE], pos.x, pos.y, 32, 32, scale, color.r, color.g, color.b, color.a);
+                render_texture(touch_textures[TEXTURE_TOUCH_JOYSTICK], pos.x + stick.x, pos.y + stick.y, 16, 16, scale, color.r, color.g, color.b, color.a);
                 break;
             case Mouse:
                 break;
             case Button:
                 if (!controlElements[i].touchID || gInTouchConfig || gDjuiPanelPauseCreated) {
-                    render_texture(touch_textures[controlElements[i].buttonTexture.buttonUp], pos.x, pos.y, 16, 16, 1 + size, color.r, color.g, color.b, color.a);
+                    render_texture(touch_textures[controlElements[i].buttonTexture.buttonUp], pos.x, pos.y, 16, 16, scale, color.r, color.g, color.b, color.a);
                 } else {
-                    render_texture(touch_textures[controlElements[i].buttonTexture.buttonDown], pos.x, pos.y, 16, 16, 1 + size, color.r, color.g, color.b, color.a);
+                    render_texture(touch_textures[controlElements[i].buttonTexture.buttonDown], pos.x, pos.y, 16, 16, scale, color.r, color.g, color.b, color.a);
                 }
                 break;
         }
@@ -392,7 +470,7 @@ static void touchscreen_read(OSContPad *pad) {
     if (!gInTouchConfig && !gDjuiPanelPauseCreated) {
         for(u32 i = 0; i < controlElementsLength; i++) {
             pos = get_pos(&configControlElements[i]);
-            size = configControlElements[i].size * 100;
+            size = (s32)((f32)configControlElements[i].size / 100.0f * 50.0f);
             if (pos.y == HIDE_POS) continue;
             switch (controlElements[i].type) {
                 case Joystick:
