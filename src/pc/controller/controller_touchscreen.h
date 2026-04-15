@@ -69,6 +69,7 @@ typedef struct {
 
 extern ConfigControlElement configControlElements[];
 extern ConfigControlElement configControlElementsLast[];
+extern ConfigControlElement configControlElementsDefault[];
 
 extern struct ControllerAPI controller_touchscreen;
 extern s16 touch_x;
@@ -116,6 +117,7 @@ struct ControlElement {
     s32 slideTouch;
 };
 
+void touch_pinch(f32 dDist);
 void touch_down(struct TouchEvent* event);
 void touch_motion(struct TouchEvent* event);
 void touch_up(struct TouchEvent* event);

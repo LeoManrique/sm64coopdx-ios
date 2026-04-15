@@ -122,6 +122,19 @@ static void djui_panel_touch_controls_editor_set_alpha(UNUSED struct DjuiBase* b
     }
 }
 
+static void djui_panel_touch_controls_editor_restore_defaults(UNUSED struct DjuiBase* base) {
+    for (s32 i = 0; i < TOUCH_COUNT; i++) {
+        configControlElements[i] = configControlElementsDefault[i];
+    }
+    // Refresh the editor sliders to reflect restored values for the currently-selected element
+    if (sTouchConfigSelectionboxAnchor) djui_selectionbox_update_value(&sTouchConfigSelectionboxAnchor->base);
+    if (sTouchConfigSliderR) djui_slider_update_value(&sTouchConfigSliderR->base);
+    if (sTouchConfigSliderG) djui_slider_update_value(&sTouchConfigSliderG->base);
+    if (sTouchConfigSliderB) djui_slider_update_value(&sTouchConfigSliderB->base);
+    if (sTouchConfigSliderA) djui_slider_update_value(&sTouchConfigSliderA->base);
+    if (sTouchConfigSliderS) djui_slider_update_value(&sTouchConfigSliderS->base);
+}
+
 void djui_panel_touch_controls_editor_create(struct DjuiBase* caller) {
     struct DjuiThreePanel* panel = djui_panel_menu_create(DLANG(CONTROLS, CONTROLS), false);
     struct DjuiBase* body = djui_three_panel_get_body(panel);
@@ -150,7 +163,7 @@ void djui_panel_touch_controls_editor_create(struct DjuiBase* caller) {
         
         sTouchConfigSliderA = djui_slider_create(body, DLANG(TOUCH_CONTROLS, TOUCH_CONTROLS_OPACITY), &configControlElements[gSelectedTouchElement].a, 0, 255, NULL);
         
-        sTouchConfigSliderS = djui_slider_create(body, DLANG(TOUCH_CONTROLS, TOUCH_CONTROLS_SCALE), &configControlElements[gSelectedTouchElement].size, 1, 2, NULL);
+        sTouchConfigSliderS = djui_slider_create(body, DLANG(TOUCH_CONTROLS, TOUCH_CONTROLS_SCALE), &configControlElements[gSelectedTouchElement].size, 100, 500, NULL);
 
         if (gSelectedTouchElement == TOUCH_MOUSE) {
             djui_base_set_enabled(&sTouchConfigSelectionboxAnchor->base, false);
@@ -163,6 +176,7 @@ void djui_panel_touch_controls_editor_create(struct DjuiBase* caller) {
 
         djui_button_create(body, "Apply Opacity to All", DJUI_BUTTON_STYLE_NORMAL, djui_panel_touch_controls_editor_set_alpha);
         djui_button_create(body, "Move", DJUI_BUTTON_STYLE_NORMAL, djui_panel_touch_controls_editor_move);
+        djui_button_create(body, "Restore Defaults", DJUI_BUTTON_STYLE_NORMAL, djui_panel_touch_controls_editor_restore_defaults);
         djui_button_create(body, DLANG(MENU, BACK), DJUI_BUTTON_STYLE_BACK, djui_panel_menu_back);
     }
 
