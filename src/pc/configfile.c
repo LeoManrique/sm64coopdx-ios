@@ -109,7 +109,11 @@ unsigned int configMusicVolume                    = MAX_VOLUME;
 unsigned int configSfxVolume                      = MAX_VOLUME;
 unsigned int configEnvVolume                      = MAX_VOLUME;
 bool         configFadeoutDistantSounds           = false;
+#ifdef TARGET_IOS
+bool         configMuteFocusLoss                  = true;
+#else
 bool         configMuteFocusLoss                  = false;
+#endif
 unsigned int configSoundOutput                    = 0; // 0 = Stereo, 1 = Mono, 2 = Headset
 // control binds
 #ifdef TOUCH_CONTROLS
