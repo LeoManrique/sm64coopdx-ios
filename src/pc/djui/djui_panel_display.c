@@ -6,6 +6,8 @@
 #include "pc/utils/misc.h"
 #include "pc/configfile.h"
 
+extern bool gfx_sdl_hidpi_supported(void);
+
 #define OPTION_ORIGINAL_UNSET ((u32)-1)
 
 static struct DjuiInputbox* sFrameLimitInput = NULL;
@@ -76,7 +78,6 @@ void djui_panel_display_create(struct DjuiBase* caller) {
         djui_checkbox_create(body, DLANG(DISPLAY, FORCE_4BY3), &configForce4By3, djui_panel_display_apply);
         djui_checkbox_create(body, DLANG(DISPLAY, SHOW_FPS), &configShowFPS, NULL);
         djui_checkbox_create(body, DLANG(DISPLAY, VSYNC), &configWindow.vsync, djui_panel_display_apply);
-        extern bool gfx_sdl_hidpi_supported(void);
         if (gfx_sdl_hidpi_supported()) {
             if (!sHidpiOriginalSet) { sHidpiOriginal = configWindow.hidpi; sHidpiOriginalSet = true; }
             djui_checkbox_create(body, "HiDPI", &configWindow.hidpi, djui_panel_display_hidpi_change);
