@@ -57,6 +57,7 @@
 static SDL_Window *wnd;
 static SDL_GLContext ctx = NULL;
 static bool sHidpiSupported = false;
+static bool sHidpiActive = false;
 
 static kb_callback_t kb_key_down = NULL;
 static kb_callback_t kb_key_up = NULL;
@@ -158,6 +159,15 @@ static void gfx_sdl_init(const char *window_title) {
     );
     ctx = SDL_GL_CreateContext(wnd);
 
+    // Record actual HiDPI state — drives rendering decisions for this window's lifetime.
+    // Toggling the config takes effect only on restart.
+    {
+        int dw = 0, dh = 0, ww = 0, wh = 0;
+        SDL_GL_GetDrawableSize(wnd, &dw, &dh);
+        SDL_GetWindowSize(wnd, &ww, &wh);
+        sHidpiActive = (dw > ww) || (dh > wh);
+    }
+
     gfx_sdl_set_vsync(configWindow.vsync);
 
     gfx_sdl_set_fullscreen();
@@ -174,7 +184,7 @@ static void gfx_sdl_main_loop(void (*run_one_game_iter)(void)) {
 
 static void gfx_sdl_get_dimensions(uint32_t *width, uint32_t *height) {
     int w, h;
-    if (configWindow.hidpi) {
+    if (sHidpiActive) {
         SDL_GL_GetDrawableSize(wnd, &w, &h);
     } else {
         SDL_GetWindowSize(wnd, &w, &h);
@@ -189,7 +199,7 @@ bool gfx_sdl_hidpi_supported(void) {
 
 void gfx_sdl_get_hidpi_scale(float *sx, float *sy) {
     int dw = 1, dh = 1, ww = 1, wh = 1;
-    if (wnd && configWindow.hidpi) {
+    if (wnd && sHidpiActive) {
         SDL_GL_GetDrawableSize(wnd, &dw, &dh);
         SDL_GetWindowSize(wnd, &ww, &wh);
     }
