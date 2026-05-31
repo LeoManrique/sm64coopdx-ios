@@ -316,6 +316,9 @@ static struct ShaderProgram *gfx_opengl_create_and_load_new_shader(struct ColorC
 #ifdef USE_GLES
     append_line(fs_buf, &fs_len, "#version 100");
     append_line(fs_buf, &fs_len, "precision mediump float;");
+    // GLSL ES has no default precision for int in fragment shaders; the screen
+    // shader effects (uShaderFlags) and dither4x4() use int, so declare one.
+    append_line(fs_buf, &fs_len, "precision highp int;");
 #else
     append_line(fs_buf, &fs_len, "#version 120");
 #endif
@@ -506,7 +509,7 @@ static struct ShaderProgram *gfx_opengl_create_and_load_new_shader(struct ColorC
 
         // exposure
         append_line(fs_buf, &fs_len, "if (uShaderFlags[4] == 1) {");
-        append_line(fs_buf, &fs_len, "texel.rgb = texel.rgb + (uShaderFlagValues[4] - 2) * texel.rgb + texel.rgb;");
+        append_line(fs_buf, &fs_len, "texel.rgb = texel.rgb + (uShaderFlagValues[4] - 2.0) * texel.rgb + texel.rgb;");
         append_line(fs_buf, &fs_len, "}");
 
         // dithering
@@ -516,7 +519,7 @@ static struct ShaderProgram *gfx_opengl_create_and_load_new_shader(struct ColorC
 
         // posterization
         append_line(fs_buf, &fs_len, "if (uShaderFlags[6] == 1) {");
-        append_line(fs_buf, &fs_len, "int levels = int(max(1.0, uShaderFlagValues[6]));");
+        append_line(fs_buf, &fs_len, "float levels = float(int(max(1.0, uShaderFlagValues[6])));");
         append_line(fs_buf, &fs_len, "texel.rgb = floor(texel.rgb * levels) / levels;");
         append_line(fs_buf, &fs_len, "}");
 
@@ -564,13 +567,12 @@ static struct ShaderProgram *gfx_opengl_create_and_load_new_shader(struct ColorC
     glCompileShader(vertex_shader);
     glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &success);
     if (!success) {
-        GLint max_length = 0;
-        glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, &max_length);
-        char error_log[1024];
+        char error_log[1024] = { 0 };
+        GLsizei log_len = 0;
         fprintf(stderr, "Vertex shader compilation failed\n");
-        glGetShaderInfoLog(vertex_shader, max_length, &max_length, &error_log[0]);
+        glGetShaderInfoLog(vertex_shader, sizeof(error_log), &log_len, &error_log[0]);
         fprintf(stderr, "%s\n", &error_log[0]);
-        sys_fatal("vertex shader compilation failed (see terminal)");
+        sys_fatal("vertex shader compilation failed:\n%s", error_log);
     }
 
     GLuint fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
@@ -578,13 +580,12 @@ static struct ShaderProgram *gfx_opengl_create_and_load_new_shader(struct ColorC
     glCompileShader(fragment_shader);
     glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &success);
     if (!success) {
-        GLint max_length = 0;
-        glGetShaderiv(fragment_shader, GL_INFO_LOG_LENGTH, &max_length);
-        char error_log[1024];
+        char error_log[1024] = { 0 };
+        GLsizei log_len = 0;
         fprintf(stderr, "Fragment shader compilation failed\n");
-        glGetShaderInfoLog(fragment_shader, max_length, &max_length, &error_log[0]);
+        glGetShaderInfoLog(fragment_shader, sizeof(error_log), &log_len, &error_log[0]);
         fprintf(stderr, "%s\n", &error_log[0]);
-        sys_fatal("fragment shader compilation failed (see terminal)");
+        sys_fatal("fragment shader compilation failed:\n%s", error_log);
     }
 
     GLuint shader_program = glCreateProgram();
