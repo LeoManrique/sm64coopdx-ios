@@ -90,7 +90,11 @@ ConfigWindow configWindow = {
     .exiting_fullscreen = false,
     .settings_changed = false,
     .msaa = 0,
+#if defined(TARGET_IOS)
+    .hidpi = true, // crisp rendering on iPhone displays by default
+#else
     .hidpi = false,
+#endif
 };
 
 ConfigStick configStick = { 0 };
