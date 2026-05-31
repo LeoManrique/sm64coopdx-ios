@@ -194,7 +194,7 @@ void render_rom_setup_screen(void) {
     u32 reopenDelay = 0;
 
     while (!gRomIsValid) {
-        WAPI.main_loop(loading_screen_produce_one_frame);
+        gWindowApi->main_loop(loading_screen_produce_one_frame);
         if (!platform_ios_is_picker_active() && !gRomIsValid) {
             if (++reopenDelay > 90) { // reopen after ~1.5s
                 reopenDelay = 0;

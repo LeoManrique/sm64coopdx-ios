@@ -90,6 +90,7 @@ file(GLOB_RECURSE SRC_C_FILES
 )
 # CPP files needed for cross-platform
 file(GLOB SRC_CPP_FILES
+    ${GAME_ROOT}/src/engine/lighting_engine.cpp
     ${GAME_ROOT}/src/pc/mods/mod_fs.cpp
     ${GAME_ROOT}/src/pc/mods/mod_storage.cpp
     ${GAME_ROOT}/src/pc/rom_checker.cpp
@@ -204,9 +205,12 @@ set(ASSET_CATALOG ${GAME_ROOT}/platform/ios/Assets.xcassets)
 
 add_executable(sm64coopdx MACOSX_BUNDLE ${ALL_SOURCES} ${IOS_OBJC_FILES} ${ASSET_CATALOG})
 
-# Files that include miniaudio.h need ObjC on iOS (AVFoundation headers)
+# Files that include miniaudio.h need ObjC on iOS (AVFoundation headers).
+# As of miniaudio v0.11.25 the library is split into miniaudio.h + miniaudio.c,
+# so the implementation file (which pulls in AVAudioSession) must also be ObjC.
 set_source_files_properties(
     ${GAME_ROOT}/src/pc/lua/utils/smlua_audio_utils.c
+    ${GAME_ROOT}/src/pc/utils/miniaudio.c
     PROPERTIES LANGUAGE OBJC
 )
 
