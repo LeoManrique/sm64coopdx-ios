@@ -8,6 +8,14 @@ BUILD_DIR="build-ios"
 CONFIG="Release"
 IPA_NAME="sm64coopdx.ipa"
 
+# CFBundleShortVersionString for the IPA. Read from the git tag on the commit being built
+# (e.g. tag v151.0.0 -> 151.0.0) so it matches the GitHub release tag, which AltStore/SideStore
+# require to track updates. Tag the release commit BEFORE building:
+#     git tag v151.0.0 && ./build_ios.sh
+# Untagged (dev) builds fall back to 1.0. Override anytime with: APP_VERSION=1.2.3 ./build_ios.sh
+APP_VERSION="${APP_VERSION:-$(git describe --tags --exact-match HEAD 2>/dev/null | sed 's/^v//')}"
+[ -z "$APP_VERSION" ] && APP_VERSION="1.0"
+
 # ---- Prerequisites check ----
 check_prerequisites() {
     if ! command -v cmake &> /dev/null; then
@@ -80,11 +88,12 @@ desktop() {
 
 # ---- Generate Xcode project ----
 generate() {
-    echo "==> Generating Xcode project..."
+    echo "==> Generating Xcode project (version $APP_VERSION)..."
     cmake -B "$BUILD_DIR" -G Xcode \
         -DCMAKE_SYSTEM_NAME=iOS \
         -DCMAKE_OSX_ARCHITECTURES=arm64 \
-        -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0
+        -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 \
+        -DIOS_MARKETING_VERSION="$APP_VERSION"
     echo "==> Xcode project generated at $BUILD_DIR/"
 }
 
@@ -94,8 +103,8 @@ build() {
         generate
     fi
 
-    echo "==> Building ($CONFIG)..."
-    cmake --build "$BUILD_DIR" --config "$CONFIG" -- CODE_SIGNING_ALLOWED=NO
+    echo "==> Building ($CONFIG, version $APP_VERSION)..."
+    cmake --build "$BUILD_DIR" --config "$CONFIG" -- CODE_SIGNING_ALLOWED=NO MARKETING_VERSION="$APP_VERSION"
     echo "==> Build succeeded."
 }
 

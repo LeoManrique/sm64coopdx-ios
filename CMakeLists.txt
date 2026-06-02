@@ -227,13 +227,18 @@ target_link_libraries(sm64coopdx
     ${GAME_ROOT}/lib/coopnet/ios/libjuice.a
 )
 
+# Marketing version -> CFBundleShortVersionString (via $(MARKETING_VERSION) in Info.plist).
+# Defaults to 1.0; build_ios.sh overrides it from the git tag on the build commit so the IPA
+# version matches the GitHub release tag (required for AltStore/SideStore source updates).
+set(IOS_MARKETING_VERSION "1.0" CACHE STRING "iOS app CFBundleShortVersionString")
+
 # iOS app bundle properties
 set_target_properties(sm64coopdx PROPERTIES
     MACOSX_BUNDLE TRUE
     MACOSX_BUNDLE_GUI_IDENTIFIER "com.sm64coopdx.ios"
     MACOSX_BUNDLE_BUNDLE_NAME "SM64CoopDX"
     MACOSX_BUNDLE_BUNDLE_VERSION "1.0"
-    MACOSX_BUNDLE_SHORT_VERSION_STRING "1.0"
+    MACOSX_BUNDLE_SHORT_VERSION_STRING "${IOS_MARKETING_VERSION}"
     MACOSX_BUNDLE_INFO_PLIST ${GAME_ROOT}/platform/ios/Info.plist
     XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "1,2"
     XCODE_ATTRIBUTE_CODE_SIGN_STYLE "Automatic"
@@ -241,6 +246,7 @@ set_target_properties(sm64coopdx PROPERTIES
     XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.sm64coopdx.ios"
     XCODE_ATTRIBUTE_DEVELOPMENT_TEAM ""
     XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_APPICON_NAME "AppIcon"
+    XCODE_ATTRIBUTE_MARKETING_VERSION "${IOS_MARKETING_VERSION}"
     RESOURCE "${ASSET_CATALOG}"
 )
 
