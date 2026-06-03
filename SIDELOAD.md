@@ -4,18 +4,29 @@ This document is not an exact step-by-step of how to sideload. It briefly shows 
 
 If you already know about sideloading and just need a quick tool recommendation, skip the document and check these out:
 
-- **[Sideloadly](https://sideloadly.io/)**
 - **[AltStore](https://altstore.io/)**
 - **[SideStore](https://sidestore.io/)**
-- **[Feather](https://feather-ios.com/)**
+- **[Sideloadly](https://sideloadly.io/)**
 
 ## Frequently asked questions
 
-- **Do I need an Apple PC to Sideload?** - Using an Apple PC is the simplest option, but using Windows and Linux is also possible.
+- **Do I need an Apple PC to Sideload?** - Using an Apple PC is the simplest option, but using Windows and Linux is also possible. Sideloading without a PC is in theory possible with [Feather](https://feather-ios.com/) but I have never tried it.
 - **Is Jailbreaking needed? Is it a risky process?** - No jailbreaking or any risky process needs to be performed, this is fully supported by Apple.
 - **Do I need the ROM to Sideload?** - Not for the sideloading process itself, once the app is installed it will automatically ask you to select the ROM from your iPhone/iPad Files.
 
-## Typical sideload process
+## Typical Sideloading process
+
+### Option 1: add the source in AltStore / SideStore
+
+If you use [AltStore](https://altstore.io/) or [SideStore](https://sidestore.io/), the easiest way to install and get update notifications automatically is to add this source:
+
+```
+https://raw.githubusercontent.com/LeoManrique/sm64coopdx-ios/main/apps.json
+```
+
+In the app, go to **Sources → +**, paste that URL, then install SM64CoopDX from the source. New releases will show up as updates without re-downloading anything manually.
+
+### Option 2: Install .ipa directly
 
 1. Download the `.ipa` from [Releases](https://github.com/LeoManrique/sm64coopdx-ios/releases/latest).
 2. Use a sideloading tool  ([AltStore](https://altstore.io/), [Sideloadly](https://sideloadly.io/), [SideStore](https://sidestore.io/), or similar) to install it on your device, signed with your Apple ID.
