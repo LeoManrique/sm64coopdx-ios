@@ -1,0 +1,30 @@
+{
+  "name": "SM64CoopDX iOS Source",
+  "identifier": "com.leomanrique.sm64coopdx-source",
+  "subtitle": "SM64 Coop Deluxe on iOS",
+  "iconURL": "https://raw.githubusercontent.com/LeoManrique/sm64coopdx-ios/main/res/icon.icon/Assets/icon.png",
+  "tintColor": "CC0000",
+  "apps": [
+    {
+      "name": "SM64CoopDX",
+      "bundleIdentifier": "com.sm64coopdx.ios",
+      "developerName": "LeoManrique",
+      "subtitle": "SM64 Coop Deluxe on iOS",
+      "localizedDescription": "A multiplayer port of Super Mario 64 for iOS. Requires a base ROM.",
+      "iconURL": "https://raw.githubusercontent.com/LeoManrique/sm64coopdx-ios/main/res/icon.icon/Assets/icon.png",
+      "tintColor": "CC0000",
+      "category": "games",
+      "appPermissions": { "entitlements": [], "privacy": {} },
+      "versions": [
+        {
+          "version": "151.0.0",
+          "date": "2026-06-01",
+          "size": 9801792,
+          "downloadURL": "https://github.com/LeoManrique/sm64coopdx-ios/releases/download/v151.0.0/sm64coopdx.ipa",
+          "minOSVersion": "15.0",
+          "localizedDescription": "Synced the fork with upstream SM64CoopDX v1.5.1."
+        }
+      ]
+    }
+  ]
+}
