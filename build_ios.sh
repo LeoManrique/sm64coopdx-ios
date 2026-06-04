@@ -8,12 +8,12 @@ BUILD_DIR="build-ios"
 CONFIG="Release"
 IPA_NAME="sm64coopdx.ipa"
 
-# CFBundleShortVersionString for the IPA. Read from the git tag on the commit being built
-# (e.g. tag v151.0.0 -> 151.0.0) so it matches the GitHub release tag, which AltStore/SideStore
-# require to track updates. Tag the release commit BEFORE building:
-#     git tag v151.0.0 && ./build_ios.sh
-# Untagged (dev) builds fall back to 1.0. Override anytime with: APP_VERSION=1.2.3 ./build_ios.sh
-APP_VERSION="${APP_VERSION:-$(git describe --tags --exact-match HEAD 2>/dev/null | sed 's/^v//')}"
+# CFBundleShortVersionString for the IPA, resolved in priority order:
+#   1. APP_VERSION env var, if set   (e.g. APP_VERSION=1.2.3 ./build_ios.sh)
+#   2. latest version in apps.json   (single source of truth for the published version)
+# apps.json's top version is what AltStore/SideStore install, so deriving the IPA
+# version from it keeps the bundle and the source feed in lockstep automatically.
+APP_VERSION="${APP_VERSION:-$(python3 -c "import json;print(json.load(open('apps.json'))['apps'][0]['versions'][0]['version'])" 2>/dev/null)}"
 [ -z "$APP_VERSION" ] && APP_VERSION="1.0"
 
 # ---- Prerequisites check ----
@@ -99,9 +99,10 @@ generate() {
 
 # ---- Build ----
 build() {
-    if [ ! -d "$BUILD_DIR" ]; then
-        generate
-    fi
+    # Always regenerate: cmake reconfigure is cheap (~0.1s, not a recompile) and ensures
+    # version changes and edits to platform/ios/Info.plist propagate into the Xcode project.
+    # A stale build-ios/ cache previously pinned an old MARKETING_VERSION and a broken plist.
+    generate
 
     echo "==> Building ($CONFIG, version $APP_VERSION)..."
     cmake --build "$BUILD_DIR" --config "$CONFIG" -- CODE_SIGNING_ALLOWED=NO MARKETING_VERSION="$APP_VERSION"

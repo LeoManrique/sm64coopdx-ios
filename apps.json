@@ -19,7 +19,7 @@
         {
           "version": "151.0.0",
           "date": "2026-06-01",
-          "size": 9801792,
+          "size": 9801794,
           "downloadURL": "https://github.com/LeoManrique/sm64coopdx-ios/releases/download/v151.0.0/sm64coopdx.ipa",
           "minOSVersion": "15.0",
           "localizedDescription": "Synced the fork with upstream SM64CoopDX v1.5.1."
