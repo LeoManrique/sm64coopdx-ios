@@ -26,6 +26,8 @@ https://raw.githubusercontent.com/LeoManrique/sm64coopdx-ios/main/apps.json
 
 In the app, go to **Sources → +**, paste that URL, then install SM64CoopDX from the source. New releases will show up as updates without re-downloading anything manually.
 
+*SideStore* apparently has the option to automatically re-install the app, so it doesn't expire every 7 day. I haven't tested this myself yet.
+
 ### Option 2: Install .ipa directly
 
 1. Download the `.ipa` from [Releases](https://github.com/LeoManrique/sm64coopdx-ios/releases/latest).
