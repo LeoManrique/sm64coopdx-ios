@@ -25,6 +25,7 @@ static uint64_t sLocalLobbyId = 0;
 static uint64_t sLocalLobbyOwnerId = 0;
 static enum NetworkType sNetworkType;
 static bool sReconnecting = false;
+static bool sResetPending = false;
 
 static CoopNetRc coopnet_initialize(void);
 
@@ -39,6 +40,29 @@ bool ns_coopnet_query(QueryCallbackPtr callback, QueryFinishCallbackPtr finishCa
     if (coopnet_lobby_list_get(GAME_NAME, password) != COOPNET_OK) { return false; }
 #endif
     return true;
+}
+
+// Request only. Callers can reach this from inside a coopnet callback (panel
+// teardown runs from network_shutdown(), which coopnet_on_error() calls with
+// Client::Update() on the stack), and coopnet derefs gClient again after some
+// callbacks return -- so freeing it here would leave them holding a dangling
+// pointer. ns_coopnet_reset_flush() does the work at a frame boundary.
+void ns_coopnet_reset_connection(void) {
+    sResetPending = true;
+}
+
+void ns_coopnet_reset_flush(void) {
+    if (!sResetPending) { return; }
+    sResetPending = false;
+    if (gNetworkType != NT_NONE) { return; }
+
+    // No is_connected() check: an already-closed client is exactly what needs
+    // freeing, and nothing else frees it -- coopnet_begin() returns OK while a
+    // stale gClient exists, and the usual pump is gated on being connected.
+    gCoopNetCallbacks.OnLobbyListGot = NULL;
+    gCoopNetCallbacks.OnLobbyListFinish = NULL;
+    coopnet_shutdown();
+    coopnet_update(); // frees the client
 }
 
 static void coopnet_on_connected(uint64_t userId) {

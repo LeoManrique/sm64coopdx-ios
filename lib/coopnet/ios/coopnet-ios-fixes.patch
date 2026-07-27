@@ -1,0 +1,169 @@
+Fixes baked into the prebuilt lib/coopnet/ios/libcoopnet.a. There is no build rule
+for that archive in this repo, so without this patch they are unreproducible.
+
+  1. socket.cpp  SocketGetInfoBits() - iOS returns the sentinel 02:00:00:00:00:00
+     for every interface, collapsing the fingerprint to 7919 + 2*ifaceCount. Use a
+     persisted per-install random id when every address is masked.
+  2. socket.cpp  SocketSetOptions()  - SO_LINGER { 1, 0 } was an abortive close
+     (RST, send buffer discarded). Now { 0, 0 }.
+  3. connection.cpp Receive()        - the OSX_BUILD guard returned unconditionally,
+     so a dropped connection was never detected. Probe with a 1-byte MSG_PEEK.
+
+Base: coop-deluxe/coopnet @ 9d9b3dd4e87dba2fa3ca542ae32b73f43df32b0e
+Apply: git -C <coopnet> apply coopnet-ios-fixes.patch
+
+Rebuild (arm64; add -DLOGGING for coopnet's LOG_*, off in the shipped archive):
+
+    SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+    for f in common/*.cpp; do
+        xcrun --sdk iphoneos clang++ -target arm64-apple-ios15.0 -isysroot "$SDK" \
+            -std=c++17 -O2 -fPIC -DOSX_BUILD=1 \
+            -Icommon -Ilib/include -c "$f" -o "${f%.cpp}.o"
+    done
+    xcrun --sdk iphoneos ar rcs libcoopnet.a common/*.o
+    xcrun --sdk iphoneos ranlib libcoopnet.a
+
+Build the game with build-ios/ + xcodebuild, never `make` -- the Makefile deletes
+lang/, built-in mods and palettes/ at parse time.
+
+--- a/common/socket.cpp
++++ b/common/socket.cpp
+@@ -4,6 +4,9 @@
+ 
+ #ifdef __APPLE__
+ #include <net/if_dl.h>
++#include <stdlib.h>   // getenv, arc4random_buf
++#include <stdio.h>    // fopen/fread/fwrite/snprintf
++#include <string.h>   // memcmp
+ 
+ #define SIOCGIFHWADDR SIOCGIFCONF
+ #define ifr_hwaddr ifr_addr
+@@ -152,8 +155,10 @@
+     }
+ 
+     // set socket to dont-linger
++    // was { 1, 0 } = abortive close: RST instead of FIN, discarding the send
++    // buffer. Inverse of the comment and of the Windows SO_DONTLINGER branch.
+     SOCKET_RESET_ERROR();
+-    struct linger lingerStruct = { 1, 0 };
++    struct linger lingerStruct = { 0, 0 };
+     if (setsockopt(aSocket, SOL_SOCKET, SO_LINGER, &lingerStruct, sizeof(lingerStruct)) < 0) {
+         LOG_ERROR("failed to set to dont-linger mode: %d", SOCKET_LAST_ERROR);
+     }
+@@ -171,10 +176,54 @@
+     }
+ }
+ 
++#ifdef __APPLE__
++// iOS returns this sentinel instead of a real MAC to any process without the
++// private net.link.addr entitlement, so the fingerprint below collapses to a
++// function of the interface count: identical across devices, and unstable on one
++// as awdl0/llw0/ap1 come and go. Use a persisted random id instead.
++static const unsigned char kAppleMaskedMac[6] = { 0x02, 0x00, 0x00, 0x00, 0x00, 0x00 };
++
++static uint64_t SocketGetInstallId(void) {
++    static uint64_t sId = 0;
++    if (sId != 0) { return sId; }
++
++    const char* home = getenv("HOME");
++    char path[1024] = { 0 };
++    snprintf(path, sizeof(path), "%s/Library/coopnet-install-id", home ? home : ".");
++
++    FILE* f = fopen(path, "rb");
++    if (f) {
++        if (fread(&sId, sizeof(sId), 1, f) != 1) { sId = 0; }
++        fclose(f);
++    }
++
++    if (sId == 0) {
++        // SocketAddHash overwrites the top 16 bits, so only 48 are ours
++        arc4random_buf(&sId, sizeof(sId));
++        sId &= 0x0000FFFFFFFFFFFFULL;
++        if (sId == 0) { sId = 1; }
++
++        f = fopen(path, "wb");
++        if (f) {
++            fwrite(&sId, sizeof(sId), 1, f);
++            fclose(f);
++        } else {
++            LOG_ERROR("SocketGetInstallId: could not persist to '%s' (%d)", path, errno);
++        }
++    }
++
++    return sId;
++}
++#endif
++
+ uint64_t SocketGetInfoBits(int aSocket) {
+     struct ifaddrs* ifaddr = NULL;
+     struct ifaddrs* ifa = NULL;
+     uint64_t info = SOCKET_DEFAULT_INFO;
++    int ifaceCount = 0;
++#ifdef __APPLE__
++    int realMacCount = 0;
++#endif
+ 
+     if (getifaddrs(&ifaddr) == 0 && ifaddr) {
+         for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+@@ -210,11 +259,24 @@
+                 value ^= ((uint64_t)hw[i]) << (8 * i);
+             }
+             info += value;
++            ifaceCount++;
++
++#ifdef __APPLE__
++            if (memcmp(hw, kAppleMaskedMac, 6) != 0) { realMacCount++; }
++#endif
+         }
+ 
+         freeifaddrs(ifaddr);
+     }
+ 
++#ifdef __APPLE__
++    // every address was the sentinel, so info encodes nothing but ifaceCount.
++    // macOS outside a sandbox sees real MACs and never lands here.
++    if (ifaceCount > 0 && realMacCount == 0) {
++        info = SOCKET_DEFAULT_INFO + SocketGetInstallId();
++    }
++#endif
++
+     info = SocketAddHash(info);
+     return info;
+ }
+--- a/common/connection.cpp
++++ b/common/connection.cpp
+@@ -106,11 +106,29 @@
+     SocketLimitBuffer(mSocket, &remaining);
+ 
+ #ifdef OSX_BUILD
+-    // OSX seems to return errno 0, size 0 on recv() when there is nothing to receive.
+-    // This causes the socket to think the connection is closed...
+-    // So instead, we'll just not call it if there is no data available.
+-    // The side effect of this is that we will not detect connection drops very quickly.
+-    if (remaining <= 0) { return; }
++    // SocketLimitBuffer clamps `remaining` to the FIONREAD count, so an empty
++    // receive buffer makes the recv() below a *zero-length* read. On BSD/Darwin
++    // that returns 0 (soreceive() bails on uio_resid == 0 before the EWOULDBLOCK
++    // check), which the ret == 0 branch then misreads as a closed connection.
++    // Linux returns -1/EAGAIN instead, which is why this only ever bit macOS.
++    // recv() is not misbehaving -- it is being asked for zero bytes.
++    if (remaining <= 0) {
++        // FIONREAD reads 0 for both "idle" and "peer closed", so returning here
++        // unconditionally means a drop is never noticed. MSG_PEEK consumes
++        // nothing and tells them apart: 0 = FIN, EAGAIN = alive but idle, any
++        // other errno = unusable (on a phone ETIMEDOUT/EHOSTUNREACH/ENETDOWN
++        // beat ECONNRESET by a mile).
++        char peekByte = 0;
++        SOCKET_RESET_ERROR();
++        int peekRet = recv(mSocket, &peekByte, 1, MSG_PEEK | MSG_DONTWAIT);
++        int peekErr = SOCKET_LAST_ERROR;
++
++        if (peekRet == 0 || (peekRet < 0 && peekErr != SOCKET_EAGAIN && peekErr != SOCKET_EWOULDBLOCK)) {
++            LOG_INFO("[%" PRIu64 "] Connection closed (peek %d, %d).", mId, peekRet, peekErr);
++            Disconnect(false);
++        }
++        return;
++    }
+ #endif
+ 
+     // receive from socket

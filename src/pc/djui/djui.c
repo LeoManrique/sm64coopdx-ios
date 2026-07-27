@@ -4,6 +4,7 @@
 #include "djui_panel_language.h"
 #include "djui_panel_pause.h"
 #include "djui_panel_join.h"
+#include "djui_panel_join_lobbies.h"
 #include "djui_panel_join_message.h"
 #include "djui_panel_confirm.h"
 #include "djui_ctx_display.h"
@@ -230,6 +231,9 @@ void djui_render(void) {
     }
 
     djui_panel_update();
+#ifdef COOPNET
+    djui_panel_join_lobbies_update();
+#endif
     djui_popup_update();
 
     djui_lua_profiler_render();

@@ -17,12 +17,18 @@
 
 #define DJUI_DESC_PANEL_WIDTH (410.0f + (16 * 2.0f))
 
+// LOBBY_LIST_FINISH never arrives if the connection dies mid-list, so don't wait
+// on it forever.
+#define DJUI_LOBBY_QUERY_TIMEOUT 10.0f
+
 static struct DjuiPaginated* sLobbyPaginated = NULL;
 static struct DjuiFlowLayout* sLobbyLayout = NULL;
 static struct DjuiButton* sRefreshButton = NULL;
 static struct DjuiThreePanel* sDescriptionPanel = NULL;
 static struct DjuiText* sTooltip = NULL;
 static char* sPassword = NULL;
+static bool sQueryPending = false;
+static f64 sQueryStartTime = 0;
 
 static void djui_panel_join_lobby_description_create(void) {
     f32 bodyHeight = 600;
@@ -99,7 +105,44 @@ void djui_panel_join_query(uint64_t aLobbyId, UNUSED uint64_t aOwnerId, uint16_t
     djui_paginated_update_page_buttons(sLobbyPaginated);
 }
 
+static void djui_panel_join_lobbies_query_end(void) {
+    sQueryPending = false;
+    if (!sRefreshButton) { return; }
+    djui_text_set_text(sRefreshButton->text, DLANG(LOBBIES, REFRESH));
+    djui_base_set_enabled(&sRefreshButton->base, true);
+}
+
+static void djui_panel_join_lobbies_query_failed(void) {
+    djui_panel_join_lobbies_query_end();
+
+    // keep whatever arrived; only report failure if we got nothing
+    if (sLobbyLayout && sLobbyLayout->base.child == NULL) {
+        struct DjuiText* text = djui_text_create(&sLobbyLayout->base, DLANG(NOTIF, COOPNET_CONNECTION_FAILED));
+        djui_base_set_size_type(&text->base, DJUI_SVT_RELATIVE, DJUI_SVT_RELATIVE);
+        djui_base_set_size(&text->base, 1, 1);
+        djui_text_set_alignment(text, DJUI_HALIGN_CENTER, DJUI_VALIGN_CENTER);
+    }
+    if (sLobbyPaginated) { djui_paginated_update_page_buttons(sLobbyPaginated); }
+}
+
+void djui_panel_join_lobbies_update(void) {
+    ns_coopnet_reset_flush(); // frame boundary, never inside a coopnet callback
+    if (!sQueryPending) { return; }
+
+    // connection gone means the finish callback can't arrive; don't sit out the timeout
+    if (!ns_coopnet_is_connected()) {
+        djui_panel_join_lobbies_query_failed();
+        return;
+    }
+
+    if ((clock_elapsed_f64() - sQueryStartTime) < DJUI_LOBBY_QUERY_TIMEOUT) { return; }
+
+    djui_panel_join_lobbies_query_failed();
+    ns_coopnet_reset_connection(); // dead or stuck mid-packet, so redial on Refresh
+}
+
 void djui_panel_join_query_finish(void) {
+    sQueryPending = false;
     if (!sLobbyLayout) { return; }
     if (!sLobbyPaginated) { return; }
     if (!sRefreshButton) { return; }
@@ -117,8 +160,10 @@ void djui_panel_join_query_finish(void) {
 }
 
 void djui_panel_join_lobbies_on_destroy(UNUSED struct DjuiBase* caller) {
+    bool leftMidQuery = sQueryPending;
     if (sPassword) { free(sPassword); }
     sPassword = NULL;
+    sQueryPending = false;
     sRefreshButton = NULL;
     sLobbyLayout = NULL;
     sLobbyPaginated = NULL;
@@ -127,6 +172,9 @@ void djui_panel_join_lobbies_on_destroy(UNUSED struct DjuiBase* caller) {
         djui_base_destroy(&sDescriptionPanel->base);
         sDescriptionPanel = NULL;
     }
+
+    // otherwise re-entering the panel reuses the same unusable connection
+    if (leftMidQuery) { ns_coopnet_reset_connection(); }
 }
 
 void djui_panel_join_lobbies_refresh(UNUSED struct DjuiBase* caller) {
@@ -134,7 +182,10 @@ void djui_panel_join_lobbies_refresh(UNUSED struct DjuiBase* caller) {
     djui_text_set_text(sRefreshButton->text, DLANG(LOBBIES, REFRESHING));
     djui_base_set_enabled(&sRefreshButton->base, false);
     djui_paginated_update_page_buttons(sLobbyPaginated);
-    ns_coopnet_query(djui_panel_join_query, djui_panel_join_query_finish, sPassword);
+
+    sQueryStartTime = clock_elapsed_f64();
+    sQueryPending = ns_coopnet_query(djui_panel_join_query, djui_panel_join_query_finish, sPassword);
+    if (!sQueryPending) { djui_panel_join_lobbies_query_failed(); }
 }
 
 void djui_panel_join_lobbies_value_changed(UNUSED struct DjuiBase* caller) {
@@ -162,7 +213,9 @@ void djui_panel_join_lobbies_create(struct DjuiBase* caller, const char* passwor
         sLobbyLayout = sLobbyPaginated->layout;
         djui_flow_layout_set_margin(sLobbyLayout, 4);
 
+        sQueryStartTime = clock_elapsed_f64();
         bool querying = ns_coopnet_query(djui_panel_join_query, djui_panel_join_query_finish, password);
+        sQueryPending = querying;
         if (!querying) {
             struct DjuiText* text = djui_text_create(&sLobbyLayout->base, DLANG(NOTIF, COOPNET_CONNECTION_FAILED));
             djui_base_set_size_type(&text->base, DJUI_SVT_RELATIVE, DJUI_SVT_RELATIVE);
@@ -181,7 +234,9 @@ void djui_panel_join_lobbies_create(struct DjuiBase* caller, const char* passwor
             sRefreshButton = djui_button_create(&rect2->base, querying ? DLANG(LOBBIES, REFRESHING) : DLANG(LOBBIES, REFRESH), DJUI_BUTTON_STYLE_NORMAL, djui_panel_join_lobbies_refresh);
             djui_base_set_size(&sRefreshButton->base, 0.485f, 64);
             djui_base_set_alignment(&sRefreshButton->base, DJUI_HALIGN_RIGHT, DJUI_VALIGN_TOP);
-            djui_base_set_enabled(&sRefreshButton->base, false);
+            // only lock the button while a query is actually in flight, otherwise
+            // a query that never started leaves it permanently unusable
+            djui_base_set_enabled(&sRefreshButton->base, !querying);
             defaultBase = &sRefreshButton->base;
         }
     }
