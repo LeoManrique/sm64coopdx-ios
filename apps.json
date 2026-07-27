@@ -16,6 +16,14 @@
       "category": "games",
       "appPermissions": { "entitlements": [], "privacy": {} },
       "versions": [
+         {
+          "version": "151.0.1",
+          "date": "2026-07-28",
+          "size": 9781023,
+          "downloadURL": "https://github.com/LeoManrique/sm64coopdx-ios/releases/download/v151.0.1/sm64coopdx.ipa",
+          "minOSVersion": "15.0",
+          "localizedDescription": "Fixed the public lobby list failing to load after the first query."
+        },
         {
           "version": "151.0.0",
           "date": "2026-06-01",
