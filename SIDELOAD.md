@@ -2,12 +2,6 @@
 
 This document is not an exact step-by-step of how to sideload. It briefly shows what the usual process looks like, and how to get updated instructions for your exact setup.
 
-If you already know about sideloading and just need a quick tool recommendation, skip the document and check these out:
-
-- **[AltStore](https://altstore.io/)**
-- **[SideStore](https://sidestore.io/)**
-- **[Sideloadly](https://sideloadly.io/)**
-
 ## Frequently asked questions
 
 - **Do I need an Apple PC to Sideload?** - Using an Apple PC is the simplest option, but using Windows and Linux is also possible. Sideloading without a PC is in theory possible with [Feather](https://feather-ios.com/) but I have never tried it.
