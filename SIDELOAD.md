@@ -4,7 +4,7 @@ This document is not an exact step-by-step of how to sideload. It briefly shows 
 
 ## Frequently asked questions
 
-- **Do I need an Apple PC to Sideload?** - Using an Apple PC is the simplest option, but using Windows and Linux is also possible. Sideloading without a PC is in theory possible with [Feather](https://feather-ios.com/) but I have never tried it.
+- **Do I need an Apple PC to Sideload?** - Using an Apple PC is the simplest option, but using Windows and Linux is also possible.
 - **Is Jailbreaking needed? Is it a risky process?** - No jailbreaking or any risky process needs to be performed, this is fully supported by Apple.
 - **Do I need the ROM to Sideload?** - Not for the sideloading process itself, once the app is installed it will automatically ask you to select the ROM from your iPhone/iPad Files.
 
