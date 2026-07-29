@@ -10,7 +10,15 @@ This document is not an exact step-by-step of how to sideload. It briefly shows 
 
 ## Typical Sideloading process
 
-### Option 1: add the source in AltStore / SideStore
+For any option, the first step is to download and setup a Sideloading tool ([AltStore](https://altstore.io/), [Sideloadly](https://sideloadly.io/), [SideStore](https://sidestore.io/), or similar) on your PC and on your iPhone / iPad.
+
+### Option 1: Install .ipa directly
+
+1. Download the `.ipa` from [Releases](https://github.com/LeoManrique/sm64coopdx-ios/releases/latest).
+2. Use your sideloading tool to install it on your device, signed with your Apple ID.
+3. Trust the certificate on the device, re-sign when needed.
+
+### Option 2: add the source in AltStore / SideStore
 
 If you use [AltStore](https://altstore.io/) or [SideStore](https://sidestore.io/), the easiest way to install and get update notifications automatically is to add this source:
 
@@ -21,14 +29,6 @@ https://raw.githubusercontent.com/LeoManrique/sm64coopdx-ios/main/apps.json
 In the app, go to **Sources → +**, paste that URL, then install SM64CoopDX from the source. New releases will show up as updates without re-downloading anything manually.
 
 *SideStore* apparently has the option to automatically re-install the app, so it doesn't expire every 7 day. I haven't tested this myself yet.
-
-### Option 2: Install .ipa directly
-
-1. Download the `.ipa` from [Releases](https://github.com/LeoManrique/sm64coopdx-ios/releases/latest).
-2. Use a sideloading tool  ([AltStore](https://altstore.io/), [Sideloadly](https://sideloadly.io/), [SideStore](https://sidestore.io/), or similar) to install it on your device, signed with your Apple ID.
-3. Trust the certificate on the device, re-sign when needed.
-
-_Note: Using an Apple PC is the simplest option, but using Windows and Linux is also possible._
 
 ## Get updated instructions
 
