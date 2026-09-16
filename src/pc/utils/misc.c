@@ -28,6 +28,7 @@
 #include "pc/configfile.h"
 #include "pc/pc_main.h"
 #include "pc/update_checker.h"
+#include "pc/platform.h"
 
 float smooth_step(float edge0, float edge1, float x) {
     float t = (x - edge0) / (edge1 - edge0);
@@ -652,8 +653,12 @@ void open_folder(const char* path) {
 #elif defined(__APPLE__) && !defined(TARGET_IOS) // macOS
     mkdir(path, 0777);
     launch("open", path);
+
+#elif defined(TARGET_IOS) // iOS
+    // No file manager to launch; deep-link into the Files app instead
+    mkdir(path, 0777);
+    platform_ios_open_folder(path);
 #endif
-    // iOS: no-op; users access the app's folder via the Files app
 }
 
 const char *strstr_lowercased(const char *haystack, const char *needle) {

@@ -172,22 +172,31 @@ set(SDL_SHARED OFF CACHE BOOL "" FORCE)
 set(SDL_STATIC ON CACHE BOOL "" FORCE)
 set(SDL_TEST OFF CACHE BOOL "" FORCE)
 set(SDL2_DISABLE_INSTALL ON CACHE BOOL "" FORCE)
-# Apply iOS gamepad fix patches to SDL2 before building
-execute_process(
-    COMMAND git apply --check ${GAME_ROOT}/patches/sdl2-ios-gamepad-fix.patch
-    WORKING_DIRECTORY ${GAME_ROOT}/lib/SDL2-source
-    RESULT_VARIABLE PATCH_CHECK_RESULT
-    ERROR_QUIET
+# Apply our iOS patches to SDL2 before building. Each one is skipped when it no
+# longer applies cleanly, which is the case once it is already in the tree.
+#   sdl2-ios-gamepad-fix : stop iPadOS turning gamepad buttons into key events
+#   sdl2-ios-uiscene     : UIScene life cycle, required by the iOS 27+ SDK
+set(SDL2_IOS_PATCHES
+    sdl2-ios-gamepad-fix.patch
+    sdl2-ios-uiscene.patch
 )
-if(PATCH_CHECK_RESULT EQUAL 0)
+foreach(PATCH ${SDL2_IOS_PATCHES})
     execute_process(
-        COMMAND git apply ${GAME_ROOT}/patches/sdl2-ios-gamepad-fix.patch
+        COMMAND git apply --check ${GAME_ROOT}/patches/${PATCH}
         WORKING_DIRECTORY ${GAME_ROOT}/lib/SDL2-source
+        RESULT_VARIABLE PATCH_CHECK_RESULT
+        ERROR_QUIET
     )
-    message(STATUS "Applied SDL2 iOS gamepad fix patch")
-else()
-    message(STATUS "SDL2 iOS gamepad fix patch already applied or not needed")
-endif()
+    if(PATCH_CHECK_RESULT EQUAL 0)
+        execute_process(
+            COMMAND git apply ${GAME_ROOT}/patches/${PATCH}
+            WORKING_DIRECTORY ${GAME_ROOT}/lib/SDL2-source
+        )
+        message(STATUS "Applied SDL2 patch ${PATCH}")
+    else()
+        message(STATUS "SDL2 patch ${PATCH} already applied or not needed")
+    endif()
+endforeach()
 
 add_subdirectory(${GAME_ROOT}/lib/SDL2-source SDL2 EXCLUDE_FROM_ALL)
 include_directories(${GAME_ROOT}/lib/SDL2-source/include)

@@ -92,7 +92,13 @@ void DynOS_Gfx_Init() {
     SysPath _DynosPacksFolder = fstring("%s/%s", DYNOS_EXE_FOLDER, DYNOS_PACKS_FOLDER);
     ScanPacksFolder(_DynosPacksFolder);
 
-    // Scan the user path folder
+    // Make sure the user packs folder exists so players can find it
+    // (on iOS it shows up under On My iPhone/SM64CoopDX in the Files app)
+    SysPath _DynosUserFolder = fstring("%s%s", DYNOS_USER_FOLDER, DYNOS_RES_FOLDER);
+    if (!fs_sys_dir_exists(_DynosUserFolder.c_str())) { fs_sys_mkdir(_DynosUserFolder.c_str()); }
     SysPath _DynosPacksUserFolder = fstring("%s%s", DYNOS_USER_FOLDER, DYNOS_PACKS_FOLDER);
+    if (!fs_sys_dir_exists(_DynosPacksUserFolder.c_str())) { fs_sys_mkdir(_DynosPacksUserFolder.c_str()); }
+
+    // Scan the user path folder
     ScanPacksFolder(_DynosPacksUserFolder);
 }

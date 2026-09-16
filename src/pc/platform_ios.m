@@ -80,6 +80,28 @@ const char *platform_ios_get_user_path(void) {
     return path;
 }
 
+// Opens the Files app at the given folder inside our Documents directory.
+// Uses the Files app's shareddocuments:// deep link
+void platform_ios_open_folder(const char *path) {
+    if (!path || !path[0]) return;
+
+    NSString *nsPath = [[NSString stringWithUTF8String:path] stringByStandardizingPath];
+    NSString *encoded = [nsPath stringByAddingPercentEncodingWithAllowedCharacters:
+                         [NSCharacterSet URLPathAllowedCharacterSet]];
+    if (!encoded) return;
+
+    NSURL *url = [NSURL URLWithString:[@"shareddocuments://" stringByAppendingString:encoded]];
+    if (!url) return;
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:^(BOOL success) {
+            if (!success) {
+                NSLog(@"[sm64coopdx] Could not open Files app at %@ (is the Files app installed?)", nsPath);
+            }
+        }];
+    });
+}
+
 unsigned int platform_ios_get_refresh_rate(void) {
     return (unsigned int)[UIScreen mainScreen].maximumFramesPerSecond;
 }
