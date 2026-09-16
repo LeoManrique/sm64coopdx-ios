@@ -14,6 +14,9 @@
 #include "menu/file_select.h"
 #include "pc/djui/djui.h"
 #include "pc/djui/djui_panel_pause.h"
+#ifdef TOUCH_CONTROLS
+#include "controller_touchscreen.h"
+#endif
 
 static int keyboard_buttons_down;
 
@@ -34,6 +37,10 @@ static int keyboard_map_scancode(int scancode) {
 }
 
 bool keyboard_on_key_down(int scancode) {
+#ifdef TOUCH_CONTROLS
+    // a physical keyboard hides the touch overlay the same way a gamepad does
+    gGamepadActive = true;
+#endif
     djui_panel_pause_disconnect_key_update(scancode);
 
     // see if interactable captures this scancode

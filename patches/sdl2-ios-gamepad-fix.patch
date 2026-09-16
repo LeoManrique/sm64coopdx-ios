@@ -1,76 +1,86 @@
-diff --git a/src/video/uikit/SDL_uikitevents.m b/src/video/uikit/SDL_uikitevents.m
-index 0a96c68..1e94a75 100644
---- a/src/video/uikit/SDL_uikitevents.m
-+++ b/src/video/uikit/SDL_uikitevents.m
-@@ -179,6 +179,9 @@ static void OnGCKeyboardDisconnected(GCKeyboard *keyboard) API_AVAILABLE(macos(1
+diff --git a/src/joystick/SDL_joystick.c b/src/joystick/SDL_joystick.c
+index e968288..c4bada8 100644
+--- a/src/joystick/SDL_joystick.c
++++ b/src/joystick/SDL_joystick.c
+@@ -438,6 +438,19 @@ SDL_bool SDL_JoysticksQuitting(void)
+     return SDL_joysticks_quitting;
+ }
  
- void SDL_InitGCKeyboard(void)
++SDL_bool SDL_JoysticksOpened(void)
++{
++    SDL_bool opened;
++
++    SDL_LockJoysticks();
++    {
++        opened = (SDL_joysticks != NULL) ? SDL_TRUE : SDL_FALSE;
++    }
++    SDL_UnlockJoysticks();
++
++    return opened;
++}
++
+ void SDL_LockJoysticks(void)
  {
-+#if TARGET_OS_IOS
-+    return; /* Disable GCKeyboard on iOS/iPadOS — it converts gamepad buttons to keyboard events */
-+#endif
-     @autoreleasepool {
-         if (@available(iOS 14.0, tvOS 14.0, *)) {
-             NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+     (void)SDL_AtomicIncRef(&SDL_joystick_lock_pending);
+diff --git a/src/joystick/SDL_joystick_c.h b/src/joystick/SDL_joystick_c.h
+index 3107d3f..929ecd5 100644
+--- a/src/joystick/SDL_joystick_c.h
++++ b/src/joystick/SDL_joystick_c.h
+@@ -47,6 +47,9 @@ extern SDL_bool SDL_JoysticksInitialized(void);
+ /* Return whether the joystick system is shutting down */
+ extern SDL_bool SDL_JoysticksQuitting(void);
+ 
++/* Return whether any joystick is currently opened */
++extern SDL_bool SDL_JoysticksOpened(void);
++
+ /* Return whether the joysticks are currently locked */
+ extern SDL_bool SDL_JoysticksLocked(void);
+ 
 diff --git a/src/video/uikit/SDL_uikitview.m b/src/video/uikit/SDL_uikitview.m
-index 676fedb..a4e8f75 100644
+index 676fedb..1af0732 100644
 --- a/src/video/uikit/SDL_uikitview.m
 +++ b/src/video/uikit/SDL_uikitview.m
-@@ -414,12 +414,14 @@ - (SDL_Scancode)scancodeFromPress:(UIPress*)press
+@@ -28,6 +28,7 @@
+ #include "../../events/SDL_mouse_c.h"
+ #include "../../events/SDL_touch_c.h"
+ #include "../../events/SDL_events_c.h"
++#include "../../joystick/SDL_joystick_c.h"
  
- - (void)pressesBegan:(NSSet<UIPress *> *)presses withEvent:(UIPressesEvent *)event
- {
-+#if !TARGET_OS_IOS /* Disabled on iOS — iPadOS converts gamepad buttons to UIPress keyboard events */
-     if (!SDL_HasGCKeyboard()) {
-         for (UIPress *press in presses) {
-             SDL_Scancode scancode = [self scancodeFromPress:press];
-             SDL_SendKeyboardKey(SDL_PRESSED, scancode);
-         }
-     }
-+#endif
-     if (SDL_IsTextInputActive()) {
-         [super pressesBegan:presses withEvent:event];
-     }
-@@ -427,12 +429,14 @@ - (void)pressesBegan:(NSSet<UIPress *> *)presses withEvent:(UIPressesEvent *)eve
+ #include "SDL_uikitappdelegate.h"
+ #include "SDL_uikitevents.h"
+@@ -383,8 +384,18 @@ - (SDL_Scancode)scancodeFromPress:(UIPress*)press
+ #endif
  
- - (void)pressesEnded:(NSSet<UIPress *> *)presses withEvent:(UIPressesEvent *)event
- {
-+#if !TARGET_OS_IOS
-     if (!SDL_HasGCKeyboard()) {
-         for (UIPress *press in presses) {
-             SDL_Scancode scancode = [self scancodeFromPress:press];
-             SDL_SendKeyboardKey(SDL_RELEASED, scancode);
-         }
-     }
+ #ifndef SDL_JOYSTICK_DISABLED
+-    /* Presses from Apple TV remote */
+-    if (!SDL_AppleTVRemoteOpenedAsJoystick) {
++    /* Presses from Apple TV remote or game controller */
++    SDL_bool controller_opened;
++#if TARGET_OS_TV
++    /* tvOS doesn't send these for game controllers, but does for the Siri remote */
++    controller_opened = (SDL_AppleTVRemoteOpenedAsJoystick > 0) ? SDL_TRUE : SDL_FALSE;
++#else
++    /* iOS doesn't have a Siri remote, but does send these for game controllers as of iOS 26.
++     * We don't currently have any way of telling what controller sent this, so assume if any
++     * controllers are opened, that the application is handling the controller as a gamepad */
++    controller_opened = SDL_JoysticksOpened();
 +#endif
-     if (SDL_IsTextInputActive()) {
-         [super pressesEnded:presses withEvent:event];
-     }
-@@ -440,12 +444,14 @@ - (void)pressesEnded:(NSSet<UIPress *> *)presses withEvent:(UIPressesEvent *)eve
- 
- - (void)pressesCancelled:(NSSet<UIPress *> *)presses withEvent:(UIPressesEvent *)event
- {
-+#if !TARGET_OS_IOS
-     if (!SDL_HasGCKeyboard()) {
-         for (UIPress *press in presses) {
-             SDL_Scancode scancode = [self scancodeFromPress:press];
-             SDL_SendKeyboardKey(SDL_RELEASED, scancode);
-         }
-     }
-+#endif
-     if (SDL_IsTextInputActive()) {
-         [super pressesCancelled:presses withEvent:event];
-     }
++    if (!controller_opened) {
+         switch (press.type) {
+         case UIPressTypeUpArrow:
+             return SDL_SCANCODE_UP;
 diff --git a/src/video/uikit/SDL_uikitviewcontroller.m b/src/video/uikit/SDL_uikitviewcontroller.m
-index dee4b19..c4330ea 100644
+index dee4b19..247ef8a 100644
 --- a/src/video/uikit/SDL_uikitviewcontroller.m
 +++ b/src/video/uikit/SDL_uikitviewcontroller.m
-@@ -334,6 +334,9 @@ - (void)initKeyboard
+@@ -334,6 +334,11 @@ - (void)initKeyboard
  
  - (NSArray *)keyCommands
  {
 +#if TARGET_OS_IOS
-+    return @[]; /* Disabled on iOS — iPadOS converts gamepad buttons to UIKeyCommand events */
++    /* Not needed on iOS 14+: GCKeyboard already delivers arrow and escape keys, and
++     * these commands would send them a second time while the text field is active. */
++    return @[];
 +#endif
      NSMutableArray *commands = [[NSMutableArray alloc] init];
      [commands addObject:[UIKeyCommand keyCommandWithInput:UIKeyInputUpArrow modifierFlags:kNilOptions action:@selector(handleCommand:)]];

@@ -226,7 +226,8 @@ bool djui_interactable_on_key_down(int scancode) {
         }
     }
 
-#ifdef TOUCH_CONTROLS
+#if defined(TOUCH_CONTROLS) && defined(__ANDROID__)
+    // Android only: SCANCODE_BACK is 0, which is also what unmapped hardware keys translate to
     if (scancode == SCANCODE_BACK && djui_panel_is_active()) {
         djui_panel_back();
         return true;
