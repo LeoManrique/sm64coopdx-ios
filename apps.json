@@ -16,6 +16,14 @@
       "category": "games",
       "appPermissions": { "entitlements": [], "privacy": {} },
       "versions": [
+        {
+          "version": "151.1.0",
+          "date": "2026-09-20",
+          "size": 9790397,
+          "downloadURL": "https://github.com/LeoManrique/sm64coopdx-ios/releases/download/v151.1.0/sm64coopdx.ipa",
+          "minOSVersion": "15.0",
+          "localizedDescription": "Added iOS 27 support, Bluetooth keyboard support, and a DynOS folder you can open from the Files app."
+        },
          {
           "version": "151.0.1",
           "date": "2026-07-28",
