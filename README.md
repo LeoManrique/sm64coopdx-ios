@@ -30,3 +30,7 @@ This fork adds iOS support with touch controls, gamepad support, and CoopNet onl
 Download the latest `.ipa` from [Releases](https://github.com/LeoManrique/sm64coopdx-ios/releases) and sideload using [AltStore](https://altstore.io/), [Sideloadly](https://sideloadly.io/), [SideStore](https://sidestore.io/), or similar tools. See [SIDELOAD.md](SIDELOAD.md) for more details.
 
 **Requirements:** iOS 15.0+, ARM64 device (iPhone/iPad), a base ROM for first launch.
+
+### Questions or Issues
+
+Feel free to directly post at https://discord.com/channels/752682015614173235/1482938391099215924 or open a [GitHub Issue](https://github.com/LeoManrique/sm64coopdx-ios/issues).
