@@ -33,4 +33,4 @@ Download the latest `.ipa` from [Releases](https://github.com/LeoManrique/sm64co
 
 ### Questions or Issues
 
-Feel free to directly post at https://discord.com/channels/752682015614173235/1482938391099215924 or open a [GitHub Issue](https://github.com/LeoManrique/sm64coopdx-ios/issues).
+Feel free to directly post at the [Discord Channel](https://discord.com/channels/752682015614173235/1482938391099215924) or open a [GitHub Issue](https://github.com/LeoManrique/sm64coopdx-ios/issues).
