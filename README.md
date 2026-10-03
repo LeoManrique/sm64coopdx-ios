@@ -23,6 +23,6 @@ Download the latest `.ipa` from [Releases](https://github.com/LeoManrique/sm64co
 
 **Requirements:** iOS 15.0+ running on an iPhone/iPad, a base ROM for first launch.
 
-## Questions or Issues
+## Questions or issues
 
-Feel free to directly post at the [Discord Channel](https://discord.com/channels/752682015614173235/1482938391099215924) or open a [GitHub Issue](https://github.com/LeoManrique/sm64coopdx-ios/issues).
+Feel free to directly post them at the [Discord Channel](https://discord.com/channels/752682015614173235/1482938391099215924) or open a [GitHub Issue](https://github.com/LeoManrique/sm64coopdx-ios/issues).
